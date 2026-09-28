@@ -125,6 +125,20 @@ Apart from the scoped staged-record verification, the hooks intentionally do not
 
 Contributors can opt into the comprehensive local gate set with `pnpm run check:all`. The command is independent of the Git hooks and is not an agent instruction.
 
+### Local customization updates
+
+Keep runtime profile data under the installation's `DSH_HOME`, outside the source checkout. Preserve that home when replacing or updating a checkout; it holds profile configuration and out-of-tree plugins. Never put API keys, credentials, or other secrets in Git. A profile `cordis.patch.yml` can override plugin configuration, but it cannot carry source-code changes such as a settings page.
+
+Track source customizations as small, reviewable commits on `local/customizations/<base-tag>`, branched from the exact upstream release tag. For example, a customization based on `dsh-v0.2.0-rc.1` belongs on `local/customizations/dsh-v0.2.0-rc.1`; do not mix upstream-release commits into this branch.
+
+To migrate to a newer upstream release:
+
+1. Fetch upstream tags and inspect the new release notes and changed areas. Create `local/customizations/<new-tag>` from the selected upstream tag.
+2. Replay the old customization commits with `git cherry-pick <old-base-tag>..local/customizations/<old-base-tag>`. Resolve conflicts against the new upstream implementation; adapt the code, tests, and paired documentation, then commit the migration result. Do not drop a patch just to make cherry-pick succeed: record an intentional replacement or removal in the migration commit.
+3. Run the checks required by the changed behavior and verify the built app against the preserved `DSH_HOME`. Keep the prior release-based branch and its runnable build until the new one is accepted; use that branch/build to roll back without reverting or rewriting the user's profile.
+
+This is a source-patch migration, not a promise that every patch applies unchanged. Upstream API or UI changes may require a deliberate port.
+
 ### CI gates
 
 The keyless [CI workflow](../.github/workflows/ci.yml) groups independent gates into broad lanes and runs a smaller compatibility signal across supported Node versions. Artifact consumers wait for one build within their lane. Required benchmarks run separately on standard GitHub-hosted Linux; the [benchmark runner decision](../.agents/notes/implemented/testing/2026-09-06-standard-hosted-benchmark-runner.md) owns routing and the job timeout. The separate real-API workflow runs `pnpm run test:e2e` with its configured worker bound. See [scripts/run-gates.ts](../scripts/run-gates.ts) and the workflow files for the current gate and job inventory.
