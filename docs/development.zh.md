@@ -129,6 +129,20 @@ vendor manifest 守卫检查 `vendor/*/src` 下的改动是否连同对应的 `v
 
 贡献者可以选择运行 `pnpm run check:all`，执行全面的本地门禁集。该命令独立于 Git 钩子，也不是对 agent 的指令。
 
+### 本地定制更新
+
+将运行时 profile 数据保存在安装所用的 `DSH_HOME` 中，并置于源码 checkout 之外。替换或更新 checkout 时保留该目录；其中保存 profile 配置和仓库外安装的插件。不要将 API key、凭据或其他秘密写入 Git。profile 的 `cordis.patch.yml` 可以覆盖插件配置，但不能承载设置页面等源码改动。
+
+将源码定制拆分为小型、便于审查的提交，放在基于精确上游 release tag 创建的 `local/customizations/<base-tag>` 分支上。例如，基于 `dsh-v0.2.0-rc.1` 的定制应放在 `local/customizations/dsh-v0.2.0-rc.1`；不要把上游 release 提交混入此分支。
+
+迁移到较新的上游 release：
+
+1. 获取上游 tags，检查新版本说明及受影响区域，然后从选定的上游 tag 创建 `local/customizations/<new-tag>`。
+2. 使用 `git cherry-pick <old-base-tag>..local/customizations/<old-base-tag>` 重放旧定制提交。针对新的上游实现解决冲突，适配代码、测试和成对文档，然后提交迁移结果。不要仅为让 cherry-pick 成功就丢弃补丁；若有意替换或移除某项定制，应在迁移提交中记录。
+3. 运行覆盖改动行为的检查，并使用保留的 `DSH_HOME` 验证构建后的应用。新版本验收前，保留基于旧 release 的分支和可运行构建；回滚时使用该分支/构建，不要撤销或改写用户 profile。
+
+这是源码补丁迁移流程，并不保证每个补丁都能原样应用。上游 API 或 UI 变化可能需要有意移植。
+
 ### CI 门禁
 
 keyless [CI 工作流](../.github/workflows/ci.yml) 将独立门禁分组到若干宽粒度 lane，并在受支持的 Node 版本上运行一组较小的兼容性检查。产物消费方在各自 lane 内等待一次 build。必需 benchmark 在标准 GitHub 托管 Linux 上独立运行；[benchmark 运行器决策](../.agents/notes/implemented/testing/2026-09-06-standard-hosted-benchmark-runner.zh.md)拥有路由及 job 超时。单独的真实 API 工作流按其配置的 worker 上限运行 `pnpm run test:e2e`。当前门禁和 job 清单以 [scripts/run-gates.ts](../scripts/run-gates.ts) 和工作流文件为准。
