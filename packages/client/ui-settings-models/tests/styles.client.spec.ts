@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const css = readFileSync(fileURLToPath(new URL('../src/client/ModelsSection.module.css', import.meta.url)), 'utf8')
+const openRouterCss = readFileSync(fileURLToPath(new URL('../src/client/OpenRouterSection.module.css', import.meta.url)), 'utf8')
 // The theme package maps `./styles/*` to `./src/styles/*`, so the declarations
 // stay on the source plane rather than needing a build.
 // Every theme sheet, not just the platform tokens: font and scrollbar
@@ -85,5 +86,14 @@ describe('ModelsSection theme styles', () => {
     // A token that resolves is never the problem; an undeclared one takes this
     // branch, and a literal here is a single colour for both themes.
     expect(css).not.toMatch(/var\(--dsw-[a-z0-9-]+\s*,\s*(?:#|rgb|rgba|hsl|hsla)/)
+  })
+})
+
+describe('OpenRouterSection theme styles', () => {
+  it('uses only declared theme variables and no literal colour fallbacks', () => {
+    const named = [...openRouterCss.matchAll(/var\((--(?:dsw|dsh|ds)-[a-z0-9-]+)/g)].map(match => match[1])
+    const undeclared = [...new Set(named)].filter(name => !tokens.includes(`  ${String(name)}:`))
+    expect(undeclared).toEqual([])
+    expect(openRouterCss).not.toMatch(/var\(--dsw-[a-z0-9-]+\s*,\s*(?:#|rgb|rgba|hsl|hsla)/)
   })
 })

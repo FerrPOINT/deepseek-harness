@@ -2120,6 +2120,13 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'detached provider metadata in registration order.',
       },
       {
+        signature: '@Remote async providerUsage(provider: string, signal: AbortSignal): Promise<LlmProviderUsage | undefined>',
+        description: 'Read the billing snapshot exposed by one registered provider route.',
+        parameters: [{ name: 'provider', description: 'registered provider route to query.' }, { name: 'signal', description: 'caller cancellation supplied by the Remote carrier.' }],
+        returns: 'normalized provider counters, or `undefined` when unsupported.',
+        throws: ['RemoteError with `llm/provider-usage-rejected` when the query fails.'],
+      },
+      {
         signature: 'registerConfigurableProviders(entries: readonly LlmConfigurableProvider[]): DirectoryRegistrationHandle',
         description: 'Declare provider routes an adapter plugin can activate through configuration. Registration is all-or-nothing: an empty list, invalid entry, or a provider already declared by any registration throws `LlmError` without registering the rest. Disposed with the fiber.',
         parameters: [{ name: 'entries', description: 'every configurable provider this plugin owns.' }],
@@ -7451,6 +7458,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'LlmProviderInfo',
     declaration: 'export interface LlmProviderInfo {\n    id: string;\n    name: string;\n}',
+  },
+  {
+    name: 'LlmProviderUsage',
+    declaration: 'export interface LlmProviderUsage {\n    provider: string;\n    currency: \'USD\';\n    totalUsage: number;\n    dailyUsage: number;\n    weeklyUsage: number;\n    monthlyUsage: number;\n    limit?: number;\n    limitRemaining?: number;\n    limitReset?: \'daily\' | \'weekly\' | \'monthly\';\n    freeTier: boolean;\n    expiresAt?: string;\n    observedAt: string;\n}',
   },
   {
     name: 'LlmReasoningEffortInfo',

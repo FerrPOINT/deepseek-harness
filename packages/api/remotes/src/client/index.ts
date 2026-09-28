@@ -163,6 +163,7 @@ export type {
 export type {
   LlmConfigurableProvider, LlmDiscoveredModel,
   LlmModelDiscoveryRequest, LlmNativeAuth, LlmProviderInfo,
+  LlmProviderUsage,
 } from '@deepseek-ai/dsh-llm/types'
 // Reference-discovery result vocabulary for the fileReferences and
 // sessionReferenceResolver namespaces.

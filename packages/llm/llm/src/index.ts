@@ -21,6 +21,7 @@ import type {
   LlmModelInfo,
   LlmResolvedModelInfo,
   LlmProviderInfo,
+  LlmProviderUsage,
   ModelModality,
   StreamChunk,
   SystemPromptUpdate,
@@ -265,6 +266,18 @@ export abstract class LlmAdapter {
   }
 
   /**
+   * Read billing counters for one owned provider route. The default declares
+   * no usage surface; adapters that implement one must keep credentials and
+   * provider response details on the Host.
+   * @param _provider - one provider route owned by this adapter.
+   * @param _signal - cancellation for the provider request.
+   * @returns a detached normalized snapshot, or `undefined` when unsupported.
+   */
+  providerUsage(_provider: string, _signal?: AbortSignal): Promise<LlmProviderUsage | undefined> {
+    return Promise.resolve(undefined)
+  }
+
+  /**
    * List models this adapter can currently advertise for one owned provider.
    * Core routing accepts unlisted model ids; catalog-driven entry points such
    * as the GUI may require membership. Adapters used there must advertise
@@ -497,6 +510,27 @@ export class LlmRuntime extends TypertRemoteService {
   @Remote
   listProviders(): LlmProviderInfo[] {
     return [...this.adapters.values()].map(({ provider }) => ({ ...provider }))
+  }
+
+  /**
+   * Read the billing snapshot exposed by one registered provider route.
+   * @param provider - registered provider route to query.
+   * @param signal - caller cancellation supplied by the Remote carrier.
+   * @returns normalized provider counters, or `undefined` when unsupported.
+   * @throws RemoteError with `llm/provider-usage-rejected` when the query fails.
+   */
+  @Remote
+  async providerUsage(provider: string, signal: AbortSignal): Promise<LlmProviderUsage | undefined> {
+    try {
+      return await this.registration(provider).adapter.providerUsage(provider, signal)
+    } catch (error: unknown) {
+      throw new RemoteError(
+        'llm/provider-usage-rejected',
+        error instanceof Error ? error.message : String(error),
+        { provider },
+        { cause: error },
+      )
+    }
   }
 
   /**

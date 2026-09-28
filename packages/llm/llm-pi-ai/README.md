@@ -37,6 +37,8 @@ Choose this adapter when the same composition serves several providers, when a r
 
 Each profile may set a `retryPolicy`; omission uses normal mode with five retries. `apiKeyEnv` is a credential reference resolved per request through the harness credential seam, so no secret enters the configuration file; a reference that resolves to nothing fails the request with `MISSING_CREDENTIAL`. Omitting it leaves the route configured-but-keyless, which for an installed catalog route defers to pi-ai's provider-native ambient discovery.
 
+The exact `openrouter` route also implements `providerUsage`: it requests `GET {baseURL}/key` with the resolved credential and returns only normalized USD counters, the optional limit, its reset period, tier, expiry, and the Host observation time. Other routes return no usage snapshot.
+
 ```yaml
 - name: '@deepseek-ai/dsh-llm-pi-ai'
   config:

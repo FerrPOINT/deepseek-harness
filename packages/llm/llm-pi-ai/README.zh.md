@@ -37,6 +37,8 @@ kind: "package-reference"
 
 每个 profile 都可以设置 `retryPolicy`；省略时使用 normal mode、最多重试五次。`apiKeyEnv` 是按请求经 harness 凭据 seam 解析的凭据引用，因此配置文件绝不包含密钥；解析为空的引用会让请求以 `MISSING_CREDENTIAL` 失败。省略它会让路由保持已配置但无密钥（configured-but-keyless）状态，对已安装目录路由而言即交由 pi-ai 提供方原生的环境发现。
 
+精确名为 `openrouter` 的路由还实现了 `providerUsage`：它使用解析后的凭据请求 `GET {baseURL}/key`，且只返回归一化的美元计数、可选限额、重置周期、层级、到期时间与 Host 观察时间。其他路由不返回用量快照。
+
 ```yaml
 - name: '@deepseek-ai/dsh-llm-pi-ai'
   config:
