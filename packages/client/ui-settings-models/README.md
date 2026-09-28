@@ -11,7 +11,7 @@ Desktop product events use the optional [product analytics service](../product-a
 
 ## Summary
 
-`dsh-client-ui-settings-models` is the Models settings page of the dsh web client: users configure API keys (stored write-only under the profile's credential reference), edit each provider's model list, and hand-declare custom pi-ai routes, with provider rows and one editor card at a time. The page joins the provider directory, the settings document, and the credential descriptions into one shared snapshot, so a row's state stays consistent across all three. It also walks first-run users through two ordered dialogs — a versioned preview notice and the conditional official-DeepSeek credential step.
+`dsh-client-ui-settings-models` provides the Models and OpenRouter settings pages of the dsh web client. Users configure write-only API keys, edit model lists, hand-declare custom pi-ai routes, and inspect the configured OpenRouter key's current spend and limit without exposing that key to the browser. The package also walks first-run users through a versioned preview notice and the conditional official-DeepSeek credential step.
 
 ## Table of Contents
 
@@ -42,6 +42,10 @@ Host configuration `credentialOnboarding` defaults to `true`. The Electron prelo
 API-key inputs start empty and use `autocomplete="new-password"` to ask browsers not to autofill saved login passwords.
 
 The primary field on an editor card is a single **API key** input — the page never asks for an environment-variable name. A typed key stores write-only through `credentials.set` under the profile's reference, deriving `<ROUTE>_API_KEY` when the profile has none, and the pi-ai profile records that derivation as `apiKeyEnv`, so `cordis.patch.yml` never carries a key value. Leaving a new pi-ai provider's key blank saves a reference-free profile and preserves provider-native authentication (for example the Bedrock credential chain or Vertex ADC). A row labels API-key state with a green solid dot only when a referenced credential is confirmed configured, and with a red solid dot only when a named reference is confirmed missing. A successful Apply emits a local accessible status message without echoing secret material.
+
+### OpenRouter usage
+
+The final **Limits** Settings entry reads the exact `openrouter` route through `llm/providerUsage` when opened and refreshes every minute while mounted. Its OpenRouter page shows daily, weekly, monthly, and lifetime spend, the active limit and remaining amount when present, keeps the last successful snapshot after a refresh failure, and links to OpenRouter Activity, API Keys, and Credits. The Host resolves the credential and returns only normalized counters; the browser never receives the key.
 
 ### Editing a provider
 

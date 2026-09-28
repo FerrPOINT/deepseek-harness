@@ -474,6 +474,36 @@ interface LlmProviderInfo {
 }
 ```
 
+```ts type-equiv
+/** Billing counters and optional spending limit reported by one provider route. */
+interface LlmProviderUsage {
+  /** Provider route key whose credential was queried. */
+  provider: string
+  /** Currency shared by every monetary value in this snapshot. */
+  currency: 'USD'
+  /** Provider-reported lifetime usage. */
+  totalUsage: number
+  /** Provider-reported usage for the current day. */
+  dailyUsage: number
+  /** Provider-reported usage for the current week. */
+  weeklyUsage: number
+  /** Provider-reported usage for the current month. */
+  monthlyUsage: number
+  /** Configured spending limit, when the provider applies one. */
+  limit?: number
+  /** Provider-reported amount remaining under the configured limit. */
+  limitRemaining?: number
+  /** Period in which the configured limit resets. */
+  limitReset?: 'daily' | 'weekly' | 'monthly'
+  /** Whether the queried key belongs to the provider's free tier. */
+  freeTier: boolean
+  /** Provider-reported key expiry timestamp, when present. */
+  expiresAt?: string
+  /** Host timestamp captured after the provider response was validated. */
+  observedAt: string
+}
+```
+
 适配器插件还会通过 `registerConfigurableProviders()` 声明哪些路由*可以*运行，并指明每条路由的用户设置分节，使配置界面能在任何路由注册之前就呈现休眠的提供方。
 
 ```ts type-equiv
@@ -847,6 +877,15 @@ declare abstract class LlmAdapter {
    */
   imageRequestPricing(_provider: string, _model: string): LlmImageRequestPricing | undefined;
   /**
+   * Read billing counters for one owned provider route. The default declares
+   * no usage surface; adapters that implement one must keep credentials and
+   * provider response details on the Host.
+   * @param _provider - one provider route owned by this adapter.
+   * @param _signal - cancellation for the provider request.
+   * @returns a detached normalized snapshot, or `undefined` when unsupported.
+   */
+  providerUsage(_provider: string, _signal?: AbortSignal): Promise<LlmProviderUsage | undefined>;
+  /**
    * List models this adapter can currently advertise for one owned provider.
    * Core routing accepts unlisted model ids; catalog-driven entry points such
    * as the GUI may require membership. Adapters used there must advertise
@@ -947,6 +986,15 @@ registerAdapter(providers: string[], adapter: LlmAdapter): AdapterRegistrationHa
  * @returns detached provider metadata in registration order.
  */
 @Remote listProviders(): LlmProviderInfo[]
+
+/**
+ * Read the billing snapshot exposed by one registered provider route.
+ * @param provider - registered provider route to query.
+ * @param signal - caller cancellation supplied by the Remote carrier.
+ * @returns normalized provider counters, or `undefined` when unsupported.
+ * @throws RemoteError with `llm/provider-usage-rejected` when the query fails.
+ */
+@Remote async providerUsage(provider: string, signal: AbortSignal): Promise<LlmProviderUsage | undefined>
 
 /**
  * Declare provider routes an adapter plugin can activate through

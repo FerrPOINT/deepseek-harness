@@ -63,6 +63,11 @@
     },
     {
       "doc": "docs/subsystems/llm-streaming.md",
+      "symbol": "LlmProviderUsage",
+      "source": "packages/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/llm-streaming.md",
       "symbol": "LlmModelInfo",
       "source": "packages/llm/llm/src/types.ts"
     },

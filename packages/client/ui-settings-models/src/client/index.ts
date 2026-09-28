@@ -29,15 +29,21 @@ import { createSettingsSchemaOperations } from './schema-operations.ts'
 import { en, zh, type ModelsKey } from './locales.ts'
 import { WELCOME_NOTICE_SETTINGS_NAMESPACE } from '../onboarding-copy.ts'
 import { Config, ONBOARDING_CONFIG_GLOBAL } from '../onboarding-config.ts'
+import { OpenRouterSection } from './OpenRouterSection.tsx'
+import type { OpenRouterSectionInjected, OpenRouterSectionProps } from './OpenRouterSection.tsx'
+import { openRouterEn, openRouterZh, type OpenRouterKey } from './openrouter-locales.ts'
 
 export type { ModelsSectionInjected, ModelsSectionProps } from './ModelsSection.tsx'
 export type { ModelsFooterOwnerProps, ProviderCardExtrasOwnerProps } from './slot-contract.ts'
 export type { ModelsKey } from './locales.ts'
+export type { OpenRouterSectionInjected, OpenRouterSectionProps } from './OpenRouterSection.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** The Models page + product-onboarding copy. */
     'settings.models': ModelsKey
+    /** OpenRouter usage and spending-limit copy. */
+    'settings.openrouter': OpenRouterKey
   }
 }
 
@@ -81,6 +87,8 @@ export function apply(ctx: ClientContext): void {
   const configured = Config(payload === undefined ? {} : payload)
   const credentialOnboarding = configured.credentialOnboarding && !('dshDesktop' in globalThis)
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-settings-models: copy dictionaries')
+  ctx.effect(() => ctx.locale.register('settings.openrouter', { zh: openRouterZh, en: openRouterEn }),
+    'ui-settings-models: OpenRouter dictionaries')
 
   const schema = createSettingsSchemaOperations(ctx.settingsSchema)
   // Bound once here, where the Remote namespaces are declared in this plugin's
@@ -146,6 +154,21 @@ export function apply(ctx: ClientContext): void {
       'settings.models.footer': { kind: 'list', scope: 'root' },
     },
   }, ModelsSection))
+  const openRouterT = ctx.locale.bind('settings.openrouter') as OpenRouterSectionProps['t']
+  ctx.slots.inject('settings.section', () => ctx.slots.register({
+    name: 'settings.section',
+    id: 'limits',
+    order: 100,
+    label: () => openRouterT('nav'),
+    locale: 'settings.openrouter',
+    inject: (): OpenRouterSectionInjected => ({
+      loadUsage: async () => {
+        const result = await ctx.remote.llm.providerUsage('openrouter')
+        if (!result.ok) throw new Error(result.error.message)
+        return result.value
+      },
+    }),
+  }, OpenRouterSection))
   if (!('dshDesktop' in globalThis)) ctx.slots.inject('settings.onboarding', () => ctx.slots.register({
     name: 'settings.onboarding',
     id: 'welcome-notice',

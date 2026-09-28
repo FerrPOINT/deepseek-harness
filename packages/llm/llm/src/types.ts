@@ -227,6 +227,34 @@ export interface LlmProviderInfo {
   name: string
 }
 
+/** Billing counters and optional spending limit reported by one provider route. */
+export interface LlmProviderUsage {
+  /** Provider route key whose credential was queried. */
+  provider: string
+  /** Currency shared by every monetary value in this snapshot. */
+  currency: 'USD'
+  /** Provider-reported lifetime usage. */
+  totalUsage: number
+  /** Provider-reported usage for the current day. */
+  dailyUsage: number
+  /** Provider-reported usage for the current week. */
+  weeklyUsage: number
+  /** Provider-reported usage for the current month. */
+  monthlyUsage: number
+  /** Configured spending limit, when the provider applies one. */
+  limit?: number
+  /** Provider-reported amount remaining under the configured limit. */
+  limitRemaining?: number
+  /** Period in which the configured limit resets. */
+  limitReset?: 'daily' | 'weekly' | 'monthly'
+  /** Whether the queried key belongs to the provider's free tier. */
+  freeTier: boolean
+  /** Provider-reported key expiry timestamp, when present. */
+  expiresAt?: string
+  /** Host timestamp captured after the provider response was validated. */
+  observedAt: string
+}
+
 /** Merge-extensible provider model modality vocabulary. */
 export interface ModelModalityMap {
   text: 'text'
@@ -304,6 +332,10 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'llm/model-discovery-rejected': {
       readonly settingsNs: string
       readonly baseURL?: string
+    }
+    /** A provider usage query refused or failed. */
+    'llm/provider-usage-rejected': {
+      readonly provider: string
     }
   }
 }

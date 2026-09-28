@@ -73,6 +73,34 @@ beforeEach(() => {
 })
 
 describe('PiAiAdapter provider routing', () => {
+  it('reads and normalizes OpenRouter key usage without returning the credential', async () => {
+    const server = await mockServer([{ body: JSON.stringify({ data: {
+      usage: 201.4594, usage_daily: 0.1036, usage_weekly: 0.1036, usage_monthly: 100.2175,
+      limit: 200, limit_remaining: 199.8964, limit_reset: 'weekly', is_free_tier: false, expires_at: null,
+    } }) }])
+    const adapter = adapterOf({ openrouter: { baseURL: server.url } }, 'secret-key')
+
+    const result = await adapter.providerUsage('openrouter')
+    expect(result).toMatchObject({
+      provider: 'openrouter', currency: 'USD', totalUsage: 201.4594, dailyUsage: 0.1036,
+      weeklyUsage: 0.1036, monthlyUsage: 100.2175, limit: 200, limitRemaining: 199.8964,
+      limitReset: 'weekly', freeTier: false,
+    })
+    expect(server.paths).toEqual(['/key'])
+    expect(server.headers[0]?.authorization).toBe('Bearer secret-key')
+    expect(JSON.stringify(result)).not.toContain('secret-key')
+    await expect(adapter.providerUsage('deepseek')).resolves.toBeUndefined()
+  })
+
+  it('rejects malformed OpenRouter usage and non-success responses', async () => {
+    const malformed = await mockServer([{ body: JSON.stringify({ data: { usage: 'wrong' } }) }])
+    await expect(adapterOf({ openrouter: { baseURL: malformed.url } }).providerUsage('openrouter'))
+      .rejects.toMatchObject({ code: 'PROVIDER_ERROR' })
+    const refused = await mockServer([{ status: 401 }])
+    await expect(adapterOf({ openrouter: { baseURL: refused.url } }).providerUsage('openrouter'))
+      .rejects.toMatchObject({ code: 'PROVIDER_ERROR', failure: { status: 401 } })
+  })
+
   it('resolves a catalog model dynamically and uses a private endpoint', async () => {
     const server = await mockServer([{ events: textEvents }])
     const ctx = await harness(server.url)
