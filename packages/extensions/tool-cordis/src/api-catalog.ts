@@ -1379,6 +1379,13 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'detached provider metadata in registration order.',
       },
       {
+        signature: '@Remote async providerUsage(provider: string, signal: AbortSignal): Promise<LlmProviderUsage | undefined>',
+        description: 'Read the billing snapshot exposed by one registered provider route.',
+        parameters: [{ name: 'provider', description: 'registered provider route to query.' }, { name: 'signal', description: 'caller cancellation supplied by the Remote carrier.' }],
+        returns: 'normalized provider counters, or `undefined` when unsupported.',
+        throws: ['RemoteError with `llm/provider-usage-rejected` when the query fails.'],
+      },
+      {
         signature: 'registerConfigurableProviders(entries: readonly LlmConfigurableProvider[]): DirectoryRegistrationHandle',
         description: 'Declare provider routes an adapter plugin can activate through configuration. Registration is all-or-nothing: an empty list, invalid entry, or a provider already declared by any registration throws `LlmError` without registering the rest. Disposed with the fiber.',
         parameters: [{ name: 'entries', description: 'every configurable provider this plugin owns.' }],
@@ -5549,7 +5556,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'LlmAdapter',
-    declaration: 'export abstract class LlmAdapter {\n    providerInfo(provider: string): LlmProviderInfo;\n    providerRetryPolicy(_provider: string): ResolvedRetryPolicy | undefined;\n    imageRequestPricing(_provider: string, _model: string): LlmImageRequestPricing | undefined;\n    listModels(_provider: string): Promise<readonly LlmModelInfo[]>;\n    resolveModel(provider: string, model: string, _signal?: AbortSignal): Promise<LlmResolvedModelInfo>;\n    async prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall>;\n    abstract stream(options: GenerateOptions): AsyncIterable<StreamChunk>;\n}',
+    declaration: 'export abstract class LlmAdapter {\n    providerInfo(provider: string): LlmProviderInfo;\n    providerRetryPolicy(_provider: string): ResolvedRetryPolicy | undefined;\n    imageRequestPricing(_provider: string, _model: string): LlmImageRequestPricing | undefined;\n    providerUsage(_provider: string, _signal?: AbortSignal): Promise<LlmProviderUsage | undefined>;\n    listModels(_provider: string): Promise<readonly LlmModelInfo[]>;\n    resolveModel(provider: string, model: string, _signal?: AbortSignal): Promise<LlmResolvedModelInfo>;\n    async prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall>;\n    abstract stream(options: GenerateOptions): AsyncIterable<StreamChunk>;\n}',
   },
   {
     name: 'LlmAttemptId',
@@ -5604,6 +5611,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface LlmProviderInfo {\n    id: string;\n    name: string;\n}',
   },
   {
+    name: 'LlmProviderUsage',
+    declaration: 'export interface LlmProviderUsage {\n    provider: string;\n    currency: \'USD\';\n    totalUsage: number;\n    dailyUsage: number;\n    weeklyUsage: number;\n    monthlyUsage: number;\n    limit?: number;\n    limitRemaining?: number;\n    limitReset?: \'daily\' | \'weekly\' | \'monthly\';\n    freeTier: boolean;\n    expiresAt?: string;\n    observedAt: string;\n}',
+  },
+  {
     name: 'LlmReasoningEffortInfo',
     declaration: 'export interface LlmReasoningEffortInfo {\n    id: ReasoningEffortId;\n    name: string;\n    description?: string;\n}',
   },
@@ -5613,7 +5624,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'LlmRuntime',
-    declaration: 'export class LlmRuntime extends TypertRemoteService {\n    constructor(ctx: Context);\n    registerAdapter(providers: string[], adapter: LlmAdapter): AdapterRegistrationHandle;\n    @Remote\n    listProviders(): LlmProviderInfo[];\n    registerConfigurableProviders(entries: readonly LlmConfigurableProvider[]): DirectoryRegistrationHandle;\n    @Remote\n    listConfigurableProviders(): LlmConfigurableProvider[];\n    registerModelDiscovery(settingsNs: string, discover: (request: LlmModelDiscoveryRequest, signal?: AbortSignal) => Promise<readonly LlmDiscoveredModel[]>): () => void;\n    async discoverModels(settingsNs: string, request: LlmModelDiscoveryRequest, signal?: AbortSignal): Promise<LlmDiscoveredModel[]>;\n    @Remote(\'discoverModels\')\n    async remoteDiscoverModels(settingsNs: string, request: LlmModelDiscoveryRequest, signal: AbortSignal): Promise<LlmDiscoveredModel[]>;\n    providerRetryPolicy(provider: string): ResolvedRetryPolicy;\n    imageRequestPricing(provider: string, model: string): LlmImageRequestPricing | undefined;\n    fileRequestText(ref: FileAttachmentRef): string;\n    async listModels(provider: string): Promise<LlmModelInfo[]>;\n    async resolveModelInfo(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo>;\n    async resolveCallConfig(config: LlmCallConfig, signal?: AbortSignal): Promise<LlmCallConfig>;\n    async prepareCall(config: LlmCallConfig, signal?: AbortSignal): Promise<PreparedLlmCall>;\n    stream(options: GenerateOptions) /* …truncated — full shape in source */',
+    declaration: 'export class LlmRuntime extends TypertRemoteService {\n    constructor(ctx: Context);\n    registerAdapter(providers: string[], adapter: LlmAdapter): AdapterRegistrationHandle;\n    @Remote\n    listProviders(): LlmProviderInfo[];\n    @Remote\n    async providerUsage(provider: string, signal: AbortSignal): Promise<LlmProviderUsage | undefined>;\n    registerConfigurableProviders(entries: readonly LlmConfigurableProvider[]): DirectoryRegistrationHandle;\n    @Remote\n    listConfigurableProviders(): LlmConfigurableProvider[];\n    registerModelDiscovery(settingsNs: string, discover: (request: LlmModelDiscoveryRequest, signal?: AbortSignal) => Promise<readonly LlmDiscoveredModel[]>): () => void;\n    async discoverModels(settingsNs: string, request: LlmModelDiscoveryRequest, signal?: AbortSignal): Promise<LlmDiscoveredModel[]>;\n    @Remote(\'discoverModels\')\n    async remoteDiscoverModels(settingsNs: string, request: LlmModelDiscoveryRequest, signal: AbortSignal): Promise<LlmDiscoveredModel[]>;\n    providerRetryPolicy(provider: string): ResolvedRetryPolicy;\n    imageRequestPricing(provider: string, model: string): LlmImageRequestPricing | undefined;\n    fileRequestText(ref: FileAttachmentRef): string;\n    async listModels(provider: string): Promise<LlmModelInfo[]>;\n    async resolveModelInfo(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo>;\n    async resolveCallConfig(config: LlmCallConfig, signal?: AbortSignal): Promise<LlmCallConfig>;\n    async prepa /* …truncated — full shape in source */',
   },
   {
     name: 'LocalAtInput',

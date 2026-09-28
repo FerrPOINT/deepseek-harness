@@ -49,6 +49,7 @@ import type {
   ImageAttachmentAccess,
   LlmModelInfo,
   LlmProviderInfo,
+  LlmProviderUsage,
   LlmResolvedModelInfo,
   PreparedAdapterCall,
   ReasoningEffortId as ReasoningEffortIdType,
@@ -211,6 +212,62 @@ function requestHeaders(headers: Readonly<Record<string, string>> | undefined): 
   }
 }
 
+/** Read one required finite non-negative OpenRouter counter. */
+function usageNumber(data: Record<string, unknown>, field: string): number {
+  const value = data[field]
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+    throw new LlmError(`OpenRouter usage response has an invalid ${field}`, 'PROVIDER_ERROR')
+  }
+  return value
+}
+
+/** Read one optional finite non-negative OpenRouter counter. */
+function optionalUsageNumber(data: Record<string, unknown>, field: string): number | undefined {
+  const value = data[field]
+  if (value === null || value === undefined) return undefined
+  return usageNumber(data, field)
+}
+
+/** Validate and detach the provider response without retaining credential-adjacent fields. */
+function openRouterUsage(provider: string, payload: unknown): LlmProviderUsage {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    throw new LlmError('OpenRouter usage response is not an object', 'PROVIDER_ERROR')
+  }
+  const root = payload as Record<string, unknown>
+  const candidate = root.data
+  if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
+    throw new LlmError('OpenRouter usage response has no data object', 'PROVIDER_ERROR')
+  }
+  const data = candidate as Record<string, unknown>
+  const reset = data.limit_reset
+  if (reset !== null && reset !== undefined && reset !== 'daily' && reset !== 'weekly' && reset !== 'monthly') {
+    throw new LlmError('OpenRouter usage response has an invalid limit_reset', 'PROVIDER_ERROR')
+  }
+  const expiresAt = data.expires_at
+  if (expiresAt !== null && expiresAt !== undefined && typeof expiresAt !== 'string') {
+    throw new LlmError('OpenRouter usage response has an invalid expires_at', 'PROVIDER_ERROR')
+  }
+  if (typeof data.is_free_tier !== 'boolean') {
+    throw new LlmError('OpenRouter usage response has an invalid is_free_tier', 'PROVIDER_ERROR')
+  }
+  const limit = optionalUsageNumber(data, 'limit')
+  const limitRemaining = optionalUsageNumber(data, 'limit_remaining')
+  return {
+    provider,
+    currency: 'USD',
+    totalUsage: usageNumber(data, 'usage'),
+    dailyUsage: usageNumber(data, 'usage_daily'),
+    weeklyUsage: usageNumber(data, 'usage_weekly'),
+    monthlyUsage: usageNumber(data, 'usage_monthly'),
+    ...limit === undefined ? {} : { limit },
+    ...limitRemaining === undefined ? {} : { limitRemaining },
+    ...reset === null || reset === undefined ? {} : { limitReset: reset },
+    freeTier: data.is_free_tier,
+    ...expiresAt === null || expiresAt === undefined ? {} : { expiresAt },
+    observedAt: new Date().toISOString(),
+  }
+}
+
 /**
  * pi-ai-backed multi-provider adapter. Each operation reads the current
  * profiles, so a configuration change reaches the next request without a
@@ -271,6 +328,34 @@ export class PiAiAdapter extends LlmAdapter {
 
   override providerRetryPolicy(provider: string): ResolvedRetryPolicy | undefined {
     return this.current().profiles.get(provider)?.retryPolicy
+  }
+
+  override async providerUsage(provider: string, signal?: AbortSignal): Promise<LlmProviderUsage | undefined> {
+    if (provider !== 'openrouter') return undefined
+    const profile = this.profileOf(this.current(), provider)
+    const baseURL = profile.baseURL ?? profile.piProvider?.baseUrl
+    if (baseURL === undefined || baseURL.length === 0) {
+      throw new LlmError('OpenRouter usage requires a configured baseURL', 'INVALID_CONFIG')
+    }
+    const apiKey = await this.config.resolveApiKey(provider, profile)
+    if (apiKey === undefined) {
+      throw new LlmError('OpenRouter usage requires an API key', 'MISSING_CREDENTIAL')
+    }
+    const response = await fetch(`${baseURL.replace(/\/+$/, '')}/key`, {
+      method: 'GET',
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        ...attributionHeaders(),
+      },
+      ...signal === undefined ? {} : { signal },
+    })
+    if (!response.ok) {
+      throw new LlmError(`OpenRouter usage request failed with HTTP ${String(response.status)}`, 'PROVIDER_ERROR', {
+        status: response.status,
+      })
+    }
+    const payload: unknown = await response.json()
+    return openRouterUsage(provider, payload)
   }
 
   override listModels(provider: string): Promise<readonly LlmModelInfo[]> {

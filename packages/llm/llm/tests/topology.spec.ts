@@ -315,6 +315,37 @@ describe('model discovery registry', () => {
   })
 })
 
+describe('provider usage', () => {
+  it('dispatches to the owning adapter and maps failures without exposing credentials', async () => {
+    const ctx = await setup()
+    const signal = new AbortController().signal
+    class UsageAdapter extends NoopAdapter {
+      override providerUsage(provider: string, received?: AbortSignal) {
+        expect(received).toBe(signal)
+        return Promise.resolve({
+          provider, currency: 'USD' as const, totalUsage: 12, dailyUsage: 1, weeklyUsage: 4,
+          monthlyUsage: 8, limit: 20, limitRemaining: 19, limitReset: 'weekly' as const,
+          freeTier: false, observedAt: '2026-09-28T00:00:00.000Z',
+        })
+      }
+    }
+    ctx.llm.registerAdapter(['openrouter'], new UsageAdapter())
+
+    await expect(ctx.llm.providerUsage('openrouter', signal)).resolves.toMatchObject({
+      provider: 'openrouter', weeklyUsage: 4, limitRemaining: 19,
+    })
+    await expect(ctx.llm.providerUsage('missing', signal)).rejects.toMatchObject({
+      code: 'llm/provider-usage-rejected', details: { provider: 'missing' },
+    })
+  })
+
+  it('returns undefined when an adapter declares no usage surface', async () => {
+    const ctx = await setup()
+    ctx.llm.registerAdapter(['plain'], new NoopAdapter())
+    await expect(ctx.llm.providerUsage('plain', new AbortController().signal)).resolves.toBeUndefined()
+  })
+})
+
 describe('imageRequestPricing resolution', () => {
   it('resolves the owning adapter declaration and degrades everywhere else to undefined', async () => {
     const ctx = await setup()

@@ -84,7 +84,7 @@ describe('ui-settings-models apply', () => {
       expect(slots.entries('settings.onboarding').map(entry => entry.options.id)).toEqual(['welcome-notice', 'deepseek-official'])
       const onboarding = slots.entries('settings.onboarding').find(entry => entry.options.id === 'deepseek-official')!
       expect((onboarding.inject as () => { automatic: boolean })().automatic).toBe(false)
-      expect(slots.entries('settings.section').map(entry => entry.options.id)).toEqual(['models'])
+      expect(slots.entries('settings.section').map(entry => entry.options.id)).toEqual(['models', 'limits'])
       await plugin.dispose()
       expect(slots.entries('settings.onboarding')).toEqual([])
       await host.dispose()
@@ -163,7 +163,7 @@ describe('ui-settings-models apply', () => {
     expect(after.slots.entries('settings.section')[0]!.component).toBe(ModelsSection)
     expect(after.slots.entries('settings.onboarding')).toHaveLength(2)
     // The self-inflicted ledger notifications hit the duplicate guard.
-    expect(after.slots.entries('settings.section')).toHaveLength(1)
+    expect(after.slots.entries('settings.section')).toHaveLength(2)
   })
 
   it('the label thunk follows the active locale without re-registration', async () => {
@@ -191,7 +191,7 @@ describe('ui-settings-models apply', () => {
     const b = await bench()
     const redeclare = declare(b.slots)
     await b.ctx.plugin({ inject: [...inject], apply }).await()
-    expect(b.slots.entries('settings.section')).toHaveLength(1)
+    expect(b.slots.entries('settings.section')).toHaveLength(2)
     // Declarer unload: the cascade removes our entry while our local
     // disposer variable goes stale.
     redeclare()
@@ -235,12 +235,15 @@ describe('ui-settings-models apply', () => {
     const fiber = b.ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
     expect(b.locale.bind('settings.models')('nav')).toBe('模型')
+    expect(b.locale.bind('settings.openrouter')('nav')).toBe('限额')
     await fiber.dispose()
     expect(b.slots.entries('settings.section')).toHaveLength(0)
     expect(b.slots.entries('settings.onboarding')).toHaveLength(0)
     // The (ns, locale) seats are free again — the dictionary disposers ran.
     expect(() => b.locale.register('settings.models', 'zh', {})).not.toThrow()
     expect(() => b.locale.register('settings.models', 'en', {})).not.toThrow()
+    expect(() => b.locale.register('settings.openrouter', 'zh', {})).not.toThrow()
+    expect(() => b.locale.register('settings.openrouter', 'en', {})).not.toThrow()
   })
 
   it('keeps remote-browser acknowledgement in process memory', async () => {
