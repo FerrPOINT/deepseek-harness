@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { LlmProviderUsage } from '@deepseek-ai/dsh-api-remotes/client'
 import { Button, IconRightUpOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import css from './OpenRouterSection.module.css'
 
 const REFRESH_INTERVAL_MS = 60_000
@@ -14,7 +14,7 @@ export interface OpenRouterSectionInjected {
 
 /** Composed OpenRouter usage section props. */
 export type OpenRouterSectionProps =
-  PropsRuntime<'settings.section'> & PropsLocale<'settings.openrouter'> & InjectFace<OpenRouterSectionInjected>
+  PropsLocale<'settings.openrouter'> & InjectFace<OpenRouterSectionInjected>
 
 function money(value: number): string {
   return new Intl.NumberFormat(undefined, {
