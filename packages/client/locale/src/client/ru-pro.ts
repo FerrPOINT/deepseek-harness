@@ -2,7 +2,17 @@
 export const ruPro: Record<string, Record<string, string>> = {
   sidebar: {
     'instance.switch': 'Переключить инстанс DSH',
+    'instance.manage': 'Настроить инстансы DSH',
+    'instance.manage.title': 'Инстансы DSH',
+    'instance.manage.description': 'Выберите, добавьте, измените или удалите инстанс.',
+    'instance.current': 'текущий',
+    'instance.edit': 'Изменить',
+    'instance.edit.title': 'Изменить инстанс DSH',
+    'instance.delete': 'Удалить',
+    'instance.delete.confirm': 'Подтвердить',
+    'instance.back': 'К списку',
     'instance.add': 'Подключить новый DSH',
+    'instance.add.title': 'Подключить инстанс DSH',
     'instance.dialog.title': 'Подключить инстанс DSH',
     'instance.dialog.description': 'Укажи адрес DSH или одноразовую ссылку для входа.',
     'instance.name': 'Название инстанса',
@@ -20,6 +30,8 @@ export const ruPro: Record<string, Record<string, string>> = {
     'instance.error.name': 'Название инстанса должно быть не длиннее 48 символов.',
     'instance.error.limit': 'Можно сохранить не больше 32 инстансов.',
     'instance.error.storage': 'Не удалось сохранить список инстансов.',
+    'instance.error.duplicate': 'Этот адрес DSH уже есть в списке.',
+    'instance.error.last': 'Нужно оставить хотя бы один инстанс DSH.',
   },
   pluginManager: {
     panel: 'Дополнения', title: 'Дополнения', intro: 'Установка, включение и настройка дополнений',
