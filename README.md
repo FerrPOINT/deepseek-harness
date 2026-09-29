@@ -16,29 +16,32 @@ Review the [safety notice](SAFETY.md) before running the project.
 
 ## Run
 
-### Run from `npm`
+<a id="run-from-source"></a>
 
-Install `Node.js`, then run:
+### Run the FerrPOINT fork from source
 
-```sh
-npx @deepseek-ai/dsh web
-```
-
-The command starts the Web UI at `http://127.0.0.1:3080` by default and opens it in the default browser for a local launch. An SSH launch only prints the host URL because the SSH client or editor owns the local forwarded address. Pass `--no-open` to run the server without opening a browser. See [Web UI guide](docs/user/guide/index.md).
-
-### Run from source
-
-To run from a repository checkout:
+Install Git, Node.js 22.19.x or 24+ with `npm`, and `pnpm` 11.7.0. This route builds the FerrPOINT fork locally and does not use Docker.
 
 ```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
+npm install --global pnpm@11.7.0
+git clone --branch dsh/customizations/dsh-v0.2.0-rc.1 https://github.com/FerrPOINT/deepseek-harness.git
 cd deepseek-harness
-pnpm install
+pnpm install --frozen-lockfile
 pnpm run build
 pnpm dsh web
 ```
 
-`pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding.
+The first Web profile uses OpenRouter with DeepSeek V4.1 Flash, a 256K context, and the Russian interface. Set `OPENROUTER_API_KEY` before launch or add the key in DSH credentials; the repository does not include credentials. Existing profiles retain their own settings. The profile grants full access without approval prompts, within the current OS account; review the [safety notice](SAFETY.md) before running untrusted projects.
+
+`pnpm run build` prepares the repository artifacts. `pnpm dsh web` starts the Web UI at `http://127.0.0.1:3080` by default and opens it in the default browser for a local launch. Pass `--no-open` to run the server without opening a browser. See the [Web UI guide](docs/user/guide/index.md).
+
+### Run the official npm release (not this fork)
+
+This command installs the official published release and does not include FerrPOINT fork changes:
+
+```sh
+npx @deepseek-ai/dsh web
+```
 
 ## Community and support
 

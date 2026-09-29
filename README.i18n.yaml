@@ -9,14 +9,14 @@
   en: 4ef4d8a71ac143f0
   zh: 1bfc3149ba8e5543
 /deepseek-harness/run:
-  en: 4e0248e4c6474fc6
-  zh: eb2fb8d78c7d6bc0
-/deepseek-harness/run/run-from-npm:
-  en: e22005cd42e6cbad
-  zh: 0f536f4208df1d60
-/deepseek-harness/run/run-from-source:
-  en: 819e3f7c144d0d64
-  zh: de815f040975dba7
+  en: 8bcfe486110004e4
+  zh: 5491f0aa70750247
+/deepseek-harness/run/run-the-ferrpoint-fork-from-source:
+  en: fbe13cdb5a8a4cd5
+  zh: 7e5cd1183e61b8c8
+/deepseek-harness/run/run-the-official-npm-release-not-this-fork:
+  en: 08be24d4f55743f6
+  zh: bace8c5b3d674eac
 /deepseek-harness/community-and-support:
   en: 42848f543aff6e02
   zh: d46a07bdc6f36629
