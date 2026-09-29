@@ -95,6 +95,7 @@ export function SidebarRoot({
   usePanels,
   useShortcuts,
   usePanelInfo,
+  useStore,
   t,
   renderSlot,
 }: SidebarRootComponentProps) {
@@ -220,6 +221,7 @@ export function SidebarRoot({
             mark={renderSlot('sidebar.brand.mark', { size: 24 }, { fallback: <FishLogo size={24} /> })}
             {...(buildVersion === undefined ? {} : { buildVersion })}
             t={t}
+            useStore={useStore}
           />
         )}
         {!darwinDesktop && toggle}

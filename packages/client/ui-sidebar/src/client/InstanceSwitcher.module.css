@@ -1,10 +1,27 @@
-.brandControl {
-  display: flex;
-  min-width: 0;
+.menuAnchor {
   flex: 1 1 auto;
-  align-items: center;
-  gap: 7px;
+  min-width: 0;
 }
+
+.instanceTrigger {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 5px;
+  overflow: hidden;
+  border: none;
+  border-radius: var(--dsw-radius-sm);
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.instanceTrigger:hover, .instanceTrigger[aria-expanded='true'] { background: var(--dsw-alias-interactive-bg-hover); }
+.instanceTrigger:focus-visible { outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)); outline-offset: -2px; }
 
 .mark {
   display: inline-flex;
@@ -13,8 +30,7 @@
   justify-content: center;
 }
 
-.selectWrap {
-  position: relative;
+.identity {
   display: flex;
   min-width: 0;
   flex: 1 1 auto;
@@ -23,38 +39,13 @@
   gap: 1px;
 }
 
-.select {
-  width: 100%;
-  min-width: 0;
-  padding: 0 16px 0 0;
+.name {
   overflow: hidden;
-  border: 0;
-  appearance: none;
-  background: transparent;
-  color: var(--dsw-alias-label-primary);
-  cursor: pointer;
-  font: inherit;
   font-size: 12px;
   font-weight: 500;
-  line-height: 18px;
+  line-height: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.selectWrap::after {
-  position: absolute;
-  top: 0;
-  right: 2px;
-  color: var(--dsw-alias-label-secondary);
-  content: '⌄';
-  font-size: 14px;
-  line-height: 16px;
-  pointer-events: none;
-}
-
-.select:focus-visible, .settingsButton:focus-visible, .rowAction:focus-visible, .instanceSelect:focus-visible {
-  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
-  outline-offset: -2px;
 }
 
 .version {
@@ -66,44 +57,9 @@
   white-space: nowrap;
 }
 
-.settingsButton, .rowAction {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: var(--dsw-radius-sm);
-  background: transparent;
-  color: var(--dsw-alias-label-secondary);
-  cursor: pointer;
-}
-
-.settingsButton { width: 28px; height: 28px; }
-.rowAction { width: 28px; height: 32px; }
-.settingsButton:hover, .rowAction:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
-.rowAction:disabled { cursor: not-allowed; opacity: .4; }
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  clip-path: inset(50%);
-}
-
-.dialog { width: min(480px, calc(100vw - 48px)); }
-.form { display: grid; gap: 14px; }
-.field { display: grid; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 12px; }
-.error { margin: 0; color: var(--dsw-alias-state-error-primary); font-size: 12px; line-height: 1.45; }
-.instanceList { display: grid; gap: 6px; }
-.instanceRow { display: flex; min-width: 0; align-items: center; gap: 2px; padding: 4px; border-radius: var(--dsw-radius-sm); }
-.instanceRow:hover { background: var(--dsw-alias-interactive-bg-hover); }
-.instanceSelect { display: grid; min-width: 0; flex: 1 1 auto; gap: 3px; padding: 4px 6px; border: 0; background: transparent; color: var(--dsw-alias-label-primary); cursor: pointer; text-align: left; }
-.instanceName, .instanceUrl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.instanceName { font-size: 12px; font-weight: 500; }
-.instanceUrl { color: var(--dsw-alias-label-tertiary); font-size: 10px; }
-.deleteConfirm { display: inline-flex; flex: none; align-items: center; gap: 4px; }
-.deleteConfirm button { padding: 4px; border: 0; background: transparent; color: var(--dsw-alias-state-error-primary); cursor: pointer; font-size: 11px; white-space: nowrap; }
+.chevron { flex: none; color: var(--dsw-alias-label-secondary); }
+.menuList { width: min(320px, calc(100vw - 24px)); }
+.optionLabel { display: grid; min-width: 0; gap: 2px; }
+.optionName, .optionUrl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.optionName { font-size: 12px; line-height: 16px; }
+.optionUrl { color: var(--dsw-alias-label-caption); font-size: 11px; line-height: 14px; }
