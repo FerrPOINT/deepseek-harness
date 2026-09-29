@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { ComponentProps } from 'react'
 import type { LlmProviderUsage } from '@deepseek-ai/dsh-api-remotes/client'
 import { OpenRouterSection } from '../src/client/OpenRouterSection.tsx'
 import { openRouterEn } from '../src/client/openrouter-locales.ts'
@@ -13,11 +14,17 @@ const usage: LlmProviderUsage = {
   limitReset: 'weekly', freeTier: false, observedAt: '2026-09-28T00:00:00.000Z',
 }
 
-const t = (key: keyof typeof openRouterEn): string => openRouterEn[key]
+type OpenRouterTranslate = ComponentProps<typeof OpenRouterSection>['t']
+
+function isOpenRouterKey(key: string): key is keyof typeof openRouterEn {
+  return Object.hasOwn(openRouterEn, key)
+}
+
+const t: OpenRouterTranslate = key => isOpenRouterKey(key) ? openRouterEn[key] : key
 
 describe('OpenRouterSection', () => {
   it('loads the snapshot and exposes provider account destinations', async () => {
-    render(<OpenRouterSection close={() => undefined} t={t} loadUsage={() => Promise.resolve(usage)} />)
+    render(<OpenRouterSection t={t} loadUsage={() => Promise.resolve(usage)} />)
     await screen.findByText('Used this week')
     expect(screen.getByText('This month')).toBeTruthy()
     expect(screen.getByRole('link', { name: /Activity/ }).getAttribute('href')).toBe('https://openrouter.ai/activity')
@@ -26,7 +33,7 @@ describe('OpenRouterSection', () => {
 
   it('keeps the last successful snapshot when a refresh fails', async () => {
     const load = vi.fn().mockResolvedValueOnce(usage).mockRejectedValueOnce(new Error('offline'))
-    render(<OpenRouterSection close={() => undefined} t={t} loadUsage={load} />)
+    render(<OpenRouterSection t={t} loadUsage={load} />)
     await screen.findByText('All time')
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
     await waitFor(() => { expect(screen.getByText(openRouterEn.refreshFailed)).toBeTruthy() })
@@ -35,7 +42,7 @@ describe('OpenRouterSection', () => {
 
   it('offers retry after the initial read fails', async () => {
     const load = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(usage)
-    render(<OpenRouterSection close={() => undefined} t={t} loadUsage={load} />)
+    render(<OpenRouterSection t={t} loadUsage={load} />)
     await screen.findByText(openRouterEn.loadFailed)
     fireEvent.click(screen.getByRole('button', { name: openRouterEn.retry }))
     await screen.findByText('All time')
