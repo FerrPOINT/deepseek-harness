@@ -27,6 +27,7 @@ import {
 import type { LanguageRowInjected } from './LanguageRow.tsx'
 import { LanguageRow } from './LanguageRow.tsx'
 import { createLanguageRowStore } from './settings-store.ts'
+import { ruPro } from './ru-pro.ts'
 
 export type { LanguageRowComponentProps, LanguageRowInjected } from './LanguageRow.tsx'
 export type { LanguageOptionRow, LanguageRowState } from './settings-store.ts'
@@ -578,6 +579,10 @@ export async function apply(ctx: ClientContext): Promise<void> {
   const locale = new LocaleRuntime(ctx, host, bootstrap)
   locale.register(COMMON_NS, { zh, en })
   locale.register(SETTINGS_NS, { zh: settingsZh, en: settingsEn })
+  ctx.effect(() => locale.addLanguage({ id: 'ru-pro', label: 'Русский', fallback: 'en' }), 'locale: Russian language')
+  for (const [namespace, dictionary] of Object.entries(ruPro)) {
+    ctx.effect(() => locale.register(namespace, 'ru-pro', dictionary), `locale: Russian ${namespace}`)
+  }
   ctx.provide('locale', locale)
   if (bridge !== undefined) {
     ctx.on('locale/change', (snapshot) => { bridge.onChange(snapshot.active) })

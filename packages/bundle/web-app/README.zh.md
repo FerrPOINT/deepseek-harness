@@ -13,7 +13,7 @@ kind: "package-bundle"
 
 ## 概述
 
-运行 `dsh --profile web`，打开提供聊天、模型与设置管理以及会话历史的交互式浏览器 GUI。它使用与其他 dsh 表层相同的模型访问、工具与安全默认值。启动时会打印带认证信息的 URL，通常还会在默认浏览器中打开；SSH 会话和 `--no-open` 会保留该 URL，供你手动打开。你可以更改端口并允许额外主机，但不能绑定所有网络接口。需要在浏览器中交互式工作时选择本包；一次性的命令行任务应使用 `dsh-headless`。
+运行 `dsh --profile web`，打开提供聊天、模型与设置管理以及会话历史的交互式浏览器 GUI。首次运行默认值与 FerrPOINT Web 环境一致：俄语界面、深色主题、通过 OpenRouter 使用 256K 上下文的 DeepSeek V4.1 Flash，以及完全访问权限预设。启动时会打印带认证信息的 URL，通常还会在默认浏览器中打开；SSH 会话和 `--no-open` 会保留该 URL，供你手动打开。你可以更改端口并允许额外主机，但不能绑定所有网络接口。需要在浏览器中交互式工作时选择本包；一次性的命令行任务应使用 `dsh-headless`。
 
 ## 目录
 
@@ -40,9 +40,11 @@ dsh --profile web --no-open --port 8080
 
 启动后你会看到 `dsh web:` 行，其根 URL 携带新的进程 token。除非 `--no-open` 或 SSH 会话抑制，否则默认浏览器会打开该 URL、取得签名 cookie，再重定向到不含认证参数的同一目录。页面加载且你可以与 agent 对话，就说明成功了。两种可预期的失败：前端未构建时，启动会以构建提示停止（checkout 中运行 `pnpm run build`）；浏览器无法打开时，stderr 会打印不含凭据的诊断，但服务器会继续运行——请自行打开已打印的启动 URL。
 
-**设置 → 模型**显示 **DeepSeek**，使用 `DEEPSEEK_API_KEY`。默认模型为 `deepseek-official` / `deepseek-flash`（DeepSeek-V41-Flash）。[DeepSeek 插件](../../llm/llm-deepseek/README.zh.md#endpoint-and-wire-format)使用 Messages API。
+**设置 → 模型**默认显示 `openrouter` 路由，地址为 `https://openrouter.ai/api/v1`，模型为 `deepseek/deepseek-v4.1-flash`。模型目录声明其上下文为 262144 token、最大输出为 65536 token、输入支持文本与图像，默认推理级别为 high。路由只引用 `OPENROUTER_API_KEY`；请在目标机器或 DSH 凭据中提供密钥后再发送请求。配置模板不含密钥。
 
-已保存的模型选择覆盖组合默认值。设置卡接受兼容 Messages 的 API 地址与凭据引用。
+已保存的模型选择覆盖组合默认值。设置卡接受兼容的 API 地址与凭据引用。
+
+默认权限预设为 `danger-full-access`：命令在无沙箱且不请求确认的情况下运行，权限范围不超过运行 DSH 的操作系统账户。仅在可信机器和工作区使用；该预设不会授予操作系统管理员权限。
 
 ### 配置
 
