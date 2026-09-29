@@ -18,31 +18,32 @@ DeepSeek Harness 处于 _开发者预览_ 阶段，正在快速迭代。**未来
 
 ## 运行
 
-### 通过 `npm` 运行
-
-安装 `Node.js`，然后运行：
-
-```sh
-npx @deepseek-ai/dsh web
-```
-
-该命令默认会在 `http://127.0.0.1:3080` 启动 Web UI，本机启动时还会用默认浏览器打开页面。通过 SSH 启动时只打印宿主机 URL，因为本地转发地址由 SSH 客户端或编辑器持有。传入 `--no-open` 可仅运行服务器而不打开浏览器。详见 [Web UI 指南](docs/user/guide/index.zh.md)。
-
 <a id="run-from-source"></a>
 
-### 从源码运行
+### 从源码运行 FerrPOINT fork
 
-如需从仓库源码运行：
+安装 Git、Node.js 22.19.x 或 24 及以上版本（包含 `npm`），并安装 `pnpm` 11.7.0。此方式会在本机从 FerrPOINT fork 构建，不使用 Docker。
 
 ```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
+npm install --global pnpm@11.7.0
+git clone --branch dsh/customizations/dsh-v0.2.0-rc.1 https://github.com/FerrPOINT/deepseek-harness.git
 cd deepseek-harness
-pnpm install
+pnpm install --frozen-lockfile
 pnpm run build
 pnpm dsh web
 ```
 
-`pnpm run build` 会准备仓库产物。`pnpm dsh web` 会直接使用这些已构建产物，不会重新构建。
+首次启动时，Web profile 默认使用 OpenRouter、DeepSeek V4.1 Flash、256K 上下文和俄语界面。启动前设置 `OPENROUTER_API_KEY`，或在 DSH 凭据中添加该密钥；仓库不包含凭据。现有 profile 保留自己的设置。此 profile 会在不请求审批的情况下授予当前操作系统账户的全部访问权限；运行不可信项目之前请阅读[安全说明](SAFETY.zh.md)。
+
+`pnpm run build` 会准备仓库产物。`pnpm dsh web` 默认会在 `http://127.0.0.1:3080` 启动 Web UI，并在本机启动时用默认浏览器打开页面。传入 `--no-open` 可仅运行服务器而不打开浏览器。详见 [Web UI 指南](docs/user/guide/index.zh.md)。
+
+### 运行官方 npm 版本（不是此 fork）
+
+此命令会安装官方发布的版本，不包含 FerrPOINT fork 的修改：
+
+```sh
+npx @deepseek-ai/dsh web
+```
 
 ## 社区与支持
 
