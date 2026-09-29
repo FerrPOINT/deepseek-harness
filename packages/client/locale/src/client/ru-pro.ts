@@ -1,5 +1,26 @@
 /** Russian translations retained from the FerrPOINT Web language pack. */
 export const ruPro: Record<string, Record<string, string>> = {
+  sidebar: {
+    'instance.switch': 'Переключить инстанс DSH',
+    'instance.add': 'Подключить новый DSH',
+    'instance.dialog.title': 'Подключить инстанс DSH',
+    'instance.dialog.description': 'Укажи адрес DSH или одноразовую ссылку для входа.',
+    'instance.name': 'Название инстанса',
+    'instance.url': 'Адрес DSH или ссылка для входа',
+    'instance.url.placeholder': 'https://dsh.example.com или ссылка с token',
+    'instance.submit': 'Подключить и открыть',
+    'instance.cancel': 'Отмена',
+    'instance.local': 'Локальный DSH',
+    'instance.error.required': 'Укажи адрес DSH или ссылку для входа.',
+    'instance.error.invalid': 'Укажи корректный адрес DSH.',
+    'instance.error.credentials': 'Адрес не может содержать логин или пароль.',
+    'instance.error.path': 'Укажи корневой адрес DSH; ссылка входа может содержать только token.',
+    'instance.error.query': 'Ссылка входа должна содержать только один непустой token.',
+    'instance.error.insecure': 'Для удалённого DSH используй HTTPS.',
+    'instance.error.name': 'Название инстанса должно быть не длиннее 48 символов.',
+    'instance.error.limit': 'Можно сохранить не больше 32 инстансов.',
+    'instance.error.storage': 'Не удалось сохранить список инстансов.',
+  },
   pluginManager: {
     panel: 'Дополнения', title: 'Дополнения', intro: 'Установка, включение и настройка дополнений',
     officialTitle: 'Официальные', bundlesTitle: 'Установленные', statusBeta: 'Экспериментальное',
