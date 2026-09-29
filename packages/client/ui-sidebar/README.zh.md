@@ -31,9 +31,7 @@ dsh Web 客户端的侧边栏让用户在展开的品牌行中通过样式统一
 
 ### 品牌与 New Session
 
-添加根地址只会保存实例，不会自动切换；请在 Settings 或品牌菜单中选择目标。手动状态检查不携带 cookie 或身份凭据，任意 HTTP 响应表示服务器可达；请求失败时显示“无法检查”，因为浏览器不会公开跨 origin 的 HTTP 状态码。一次性登录 token 只用于建立目标 DSH 会话，不会存入实例列表。
-
-展开的品牌行会在 `sidebar.brand.mark` 旁显示样式统一的 DSH 实例菜单。Settings 中的实例页面会列出已保存的地址，支持选择、添加、编辑与删除。添加和编辑接受根地址或一次性根登录链接。实例列表仅将规范化后的 origin 与显示名称保存在当前 origin 的存储中；切换 origin 时，会把已验证的实例列表放入 URL fragment，由目标实例导入后移除。一次性登录 token 保留在启动查询参数中，不会写入实例列表。完整构建会在当前实例名称下方显示代码徽标；该徽标使用 `DSH_CLIENT_VERSION`、可选的 7 位 `DSH_CLIENT_COMMIT_HASH` 与 `DSH_CLIENT_GIT_DIRTY=true` 组装成 `version[-commit][-dirty]`；缺少版本元数据时不显示徽标。New Session 优先使用作用域操作明确指定的 Workspace，否则使用当前 Session 所属 Workspace，再否则使用最近活跃 Workspace；一个 Workspace 都没有时则清空选择，进入空白 New Session 页面。展开态的新建会话按钮在悬停或键盘聚焦时于右侧以灰色文字显示当前有效绑定。快捷键可见且空间较窄时，居中的图标与文字在快捷键之前渐隐；CSS 为快捷键保留宽度，无需测量按钮。纯图标控件保留使用平台键位样式的 tooltip，侧栏隐藏时常驻的 macOS 头部控件也保持一致。所有控件均提供 `aria-keyshortcuts`。
+展开的品牌行会在 `sidebar.brand.mark` 旁显示样式统一的 DSH 实例菜单。Settings 中的实例页面会列出已保存的地址，支持选择、添加、重命名与删除。保存根地址不会离开当前 origin；选择已保存的地址才会切换。每个 DSH origin 都在自己的本地存储中维护实例列表，因此需要在每个 DSH 上分别配置。切换时直接打开所选地址，不会传递实例列表。一次性根登录链接会携带 token 查询参数打开目标，但只保存规范化后的 origin 与显示名称。手动状态检查发送不带 cookie 或身份凭据的 `HEAD` 请求；任意 HTTP 响应表示服务器可达，请求失败时显示“无法检查”，因为浏览器不会公开跨 origin 的 HTTP 状态码。完整构建会在当前实例名称下方显示代码徽标；该徽标使用 `DSH_CLIENT_VERSION`、可选的 7 位 `DSH_CLIENT_COMMIT_HASH` 与 `DSH_CLIENT_GIT_DIRTY=true` 组装成 `version[-commit][-dirty]`；缺少版本元数据时不显示徽标。New Session 优先使用作用域操作明确指定的 Workspace，否则使用当前 Session 所属 Workspace，再否则使用最近活跃 Workspace；一个 Workspace 都没有时则清空选择，进入空白 New Session 页面。展开态的新建会话按钮在悬停或键盘聚焦时于右侧以灰色文字显示当前有效绑定。快捷键可见且空间较窄时，居中的图标与文字在快捷键之前渐隐；CSS 为快捷键保留宽度，无需测量按钮。纯图标控件保留使用平台键位样式的 tooltip，侧栏隐藏时常驻的 macOS 头部控件也保持一致。所有控件均提供 `aria-keyshortcuts`。
 
 ### 全局面板入口
 

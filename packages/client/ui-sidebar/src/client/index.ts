@@ -17,7 +17,7 @@ import { HeaderLeadingControls } from './HeaderLeadingControls.tsx'
 import { SidebarRoot } from './SidebarRoot.tsx'
 import { InstanceSettingsSection } from './InstanceSettingsSection.tsx'
 import { createInstanceRegistryStore } from './instance-registry-store.ts'
-import { clearTransferredRegistry, readInitialInstanceRegistry, writeInstanceRegistry } from './instance-registry.ts'
+import { clearLegacyInstanceTransfer, readInitialInstanceRegistry, writeInstanceRegistry } from './instance-registry.ts'
 import type { DshInstance } from './instance-registry.ts'
 import { en, zh, type SidebarKey } from './locales.ts'
 
@@ -58,9 +58,9 @@ export function apply(ctx: ClientContext): void {
   const initialRegistry = readInitialInstanceRegistry(window.location.href, storage, t('instance.local'))
   const registryStore = createInstanceRegistryStore(initialRegistry.instances)
   writeInstanceRegistry(storage, initialRegistry.instances)
-  if (initialRegistry.hasTransfer) clearTransferredRegistry(window.history, window.location.href)
-  const writeInstances = (instances: readonly DshInstance[]): boolean =>
-    writeInstanceRegistry(storage, instances)
+  clearLegacyInstanceTransfer(window.history, window.location.href)
+  const writeInstances = (instances: readonly DshInstance[]): boolean => writeInstanceRegistry(storage, instances)
+  const openInstance = (url: string): void => { window.location.assign(url) }
   const panels = createSnapshotStore<readonly SidebarPanelMetadata[]>([])
   const syncPanels = (): void => {
     const next = ctx.slots.entriesOfSlot('sidebar.panellist').map(({ options }) => {
@@ -87,6 +87,7 @@ export function apply(ctx: ClientContext): void {
       if (id === 'plugins' || id === 'schedules') ctx.get('productAnalytics')?.track('sidebar_menu_click', { menu_name: id === 'plugins' ? 'plugin' : 'cron' })
       ctx.layout.selectPanel(id)
     },
+    openInstance,
     hooks: { panels, shortcuts: ctx.shortcuts.catalog },
   })
   ctx.slots.inject('sidebar', () => ctx.slots.register({
@@ -111,7 +112,7 @@ export function apply(ctx: ClientContext): void {
     label: () => t('instance.section'),
     locale: NS,
     store: registryStore,
-    inject: () => ({ writeInstances }),
+    inject: () => ({ writeInstances, openInstance }),
   }, InstanceSettingsSection))
   // macOS desktop hides the collapsed sidebar entirely, so the open/New
   // Session controls move into the frame's window-chrome seat beside the
