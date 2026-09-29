@@ -30,7 +30,7 @@ import { en, ja, es, fr, de, ru, pt, zh, type ModelsKey } from './locales.ts'
 import { WELCOME_NOTICE_SETTINGS_NAMESPACE } from '../onboarding-copy.ts'
 import { Config, ONBOARDING_CONFIG_GLOBAL } from '../onboarding-config.ts'
 import { OpenRouterSection } from './OpenRouterSection.tsx'
-import type { OpenRouterSectionInjected, OpenRouterSectionProps } from './OpenRouterSection.tsx'
+import type { OpenRouterSectionInjected } from './OpenRouterSection.tsx'
 import { openRouterEn, openRouterZh, type OpenRouterKey } from './openrouter-locales.ts'
 
 export type { ModelsSectionInjected, ModelsSectionProps } from './ModelsSection.tsx'
@@ -152,7 +152,7 @@ export function apply(ctx: ClientContext): void {
       'settings.models.footer': { kind: 'list', scope: 'root' },
     },
   }, ModelsSection))
-  const openRouterT = ctx.locale.bind('settings.openrouter') as OpenRouterSectionProps['t']
+  const openRouterT = ctx.locale.bind('settings.openrouter')
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',
     id: 'limits',

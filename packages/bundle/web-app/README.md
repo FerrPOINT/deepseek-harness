@@ -42,9 +42,11 @@ dsh --profile web --no-open --port 8080
 
 After startup you see a `dsh web:` line whose root URL carries a fresh process token. Unless `--no-open` or an SSH session suppresses it, the default browser opens that URL, receives a signed cookie, and redirects to the same directory without the token. You know it worked when the page loads and you can chat with the agent. Two failures to expect: if the frontend is not built, startup stops with a build hint (`pnpm run build` in a checkout); if the browser cannot be opened, a credential-free diagnostic prints to stderr while the server keeps running — open the printed startup URL yourself.
 
-**Settings → Models** displays **DeepSeek**, using `DEEPSEEK_API_KEY`. The default is `deepseek-official` / `deepseek-flash` (DeepSeek-V4.1-Flash). The [DeepSeek plugin](../../llm/llm-deepseek/README.md#endpoint-and-wire-format) uses the Messages API.
+**Settings → Models** starts with the `openrouter` route at `https://openrouter.ai/api/v1` and the `deepseek/deepseek-v4.1-flash` model. Its catalog entry declares a 262,144-token context, 65,536 maximum output tokens, text and image input, and high reasoning by default. The route refers to `OPENROUTER_API_KEY`; provide the key on the target machine or in DSH credentials before sending a request. No key is included in the profile template.
 
-Saved model selections override the composition default. The settings card accepts a Messages-compatible API address and a credential reference.
+Saved model selections override the composition default. The settings card accepts compatible API addresses and credential references.
+
+The default permission preset is `danger-full-access`: commands run without a sandbox and without approval prompts, within the rights of the operating-system account running DSH. Use this only on a trusted machine and workspace; it does not grant operating-system administrator rights.
 
 ### Configuration
 
