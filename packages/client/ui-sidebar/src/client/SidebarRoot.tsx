@@ -32,6 +32,7 @@ import type {
 } from './contract/slots.ts'
 import { FIXED_PANEL_ID } from './panel-pins.ts'
 import { createScrollHandoff } from './scroll-handoff.ts'
+import { InstanceSwitcher } from './InstanceSwitcher.tsx'
 import css from './SidebarRoot.module.css'
 
 /** Wide-content unmount delay; matches the 150ms wide-content fade-out. */
@@ -328,53 +329,20 @@ export function SidebarRoot({
           traffic lights and keeps the toggle at the sidebar's top-right. */}
       {darwinDesktop && <div className={css.topStrip} data-window-drag>{toggle}</div>}
       <div className={css.logoRow} data-window-drag>
-        {/* Expanded, the brand doubles as a New Session shortcut while the
-            access snapshot allows `session/create` — except on
-            macOS, where it stays part of the logo row's window-drag surface
-            (the drag-row controls rule would subtract a button);
-            the collapsed rail's logo is the expand toggle below instead.
-            Mouse clicks on the local-build fallbacks copy the version instead. */}
-        {wide && (() => {
-          const identity = (
-            <span className={css.brandIdentity} aria-hidden="true">
-              <span className={css.brandMark}>
-                {renderSlot('sidebar.brand.mark', { size: 24 }, {
-                  fallback: buildVersion === undefined
-                    ? <FishLogo size={24} />
-                    : <span className={css.copyVersion} data-copy-version onClick={copyVersion(buildVersion)}><FishLogo size={24} /></span>,
-                })}
-              </span>
-              <span className={css.brandName}>
-                {renderSlot('sidebar.brand.name', {}, {
-                  fallback: buildVersion === undefined
-                    ? <span className={css.fallbackBrandName}>{t('brand.localBuild')}</span>
-                    : (
-                      <span className={clsx(css.localBuildBrand, css.copyVersion)} data-copy-version onClick={copyVersion(buildVersion)}>
-                        <span className={css.localBuildTitle}>{t('brand.localBuild')}</span>
-                        <span className={css.buildVersion}>{buildVersion}</span>
-                      </span>
-                    ),
-                })}
-              </span>
-            </span>
-          )
-          return darwinDesktop || !canStartSession
-            ? <span className={clsx(css.brand, css.wide)}>{identity}</span>
-            : (
-              <button
-                type="button"
-                className={clsx(css.brand, css.wide)}
-                aria-label={t('session.new.label')}
-                aria-keyshortcuts={newShortcut?.aria}
-                onClick={(event) => {
-                  if ((event.target as Element).closest('[data-copy-version]') !== null) return
-                  openNewSession()
-                }}
-              >
-                {identity}
-              </button>
-            )
-        })()}
+        {wide && (
+          <InstanceSwitcher
+            mark={renderSlot('sidebar.brand.mark', { size: 24 }, { fallback: buildVersion === undefined
+              ? <FishLogo size={24} />
+              : (
+                <span className={css.copyVersion} data-copy-version onClick={(event) => {
+                  event.stopPropagation()
+                  copyVersion(buildVersion)()
+                }}><FishLogo size={24} /></span>
+              ) })}
+            {...(buildVersion === undefined ? {} : { buildVersion })}
+            t={t}
+          />
+        )}
         {!darwinDesktop && toggle}
       </div>
 

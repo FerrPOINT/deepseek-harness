@@ -12,6 +12,25 @@ export const zh = {
   'navigation.label': '导航',
   'panels.more': '更多',
   'version.copied': '版本号复制成功',
+  'instance.switch': '切换 DSH 实例',
+  'instance.add': '连接新的 DSH',
+  'instance.dialog.title': '连接 DSH 实例',
+  'instance.dialog.description': '输入 DSH 地址或一次性登录链接。',
+  'instance.name': '实例名称',
+  'instance.url': 'DSH 地址或登录链接',
+  'instance.url.placeholder': 'https://dsh.example.com 或带 token 的链接',
+  'instance.submit': '连接并打开',
+  'instance.cancel': '取消',
+  'instance.local': '本地 DSH',
+  'instance.error.required': '请输入 DSH 地址或登录链接。',
+  'instance.error.invalid': '请输入有效的 DSH 地址。',
+  'instance.error.credentials': '地址中不能包含用户名或密码。',
+  'instance.error.path': '请使用 DSH 根地址；登录链接只能包含 token。',
+  'instance.error.query': '登录链接必须只包含一个非空 token。',
+  'instance.error.insecure': '远程 DSH 必须使用 HTTPS。',
+  'instance.error.name': '实例名称不能超过 48 个字符。',
+  'instance.error.limit': '最多可保存 32 个实例。',
+  'instance.error.storage': '无法保存实例列表。',
 } satisfies Record<string, string>
 
 /** The sidebar namespace key union. */
@@ -29,10 +48,30 @@ export const en = {
   'navigation.label': 'Navigation',
   'panels.more': 'More',
   'version.copied': 'Version copied',
+  'instance.switch': 'Switch DSH instance',
+  'instance.add': 'Connect new DSH',
+  'instance.dialog.title': 'Connect DSH instance',
+  'instance.dialog.description': 'Enter a DSH address or a one-time sign-in link.',
+  'instance.name': 'Instance name',
+  'instance.url': 'DSH address or sign-in link',
+  'instance.url.placeholder': 'https://dsh.example.com or a link with token',
+  'instance.submit': 'Connect and open',
+  'instance.cancel': 'Cancel',
+  'instance.local': 'Local DSH',
+  'instance.error.required': 'Enter a DSH address or sign-in link.',
+  'instance.error.invalid': 'Enter a valid DSH address.',
+  'instance.error.credentials': 'The address cannot contain a username or password.',
+  'instance.error.path': 'Use the DSH root address; sign-in links may only contain token.',
+  'instance.error.query': 'The sign-in link must contain only one non-empty token.',
+  'instance.error.insecure': 'Remote DSH instances must use HTTPS.',
+  'instance.error.name': 'The instance name must be 48 characters or fewer.',
+  'instance.error.limit': 'You can save up to 32 instances.',
+  'instance.error.storage': 'The instance list could not be saved.',
 } satisfies Record<SidebarKey, string>
 
 /** Japanese copy, checked against the English keys. */
 export const ja = {
+  ...en,
   'panels.unpinTooltip': '左サイドバーから固定解除',
   'panels.unpin': '{name}をサイドバーから固定解除',
   'session.new': '新規セッション',
@@ -47,6 +86,7 @@ export const ja = {
 
 /** Spanish dictionary, checked against the English keys. */
 export const es = {
+  ...en,
   'panels.unpinTooltip': 'Desanclar de la barra lateral izquierda',
   'panels.unpin': 'Desfijar {name} de la barra lateral',
   'session.new': 'Nueva sesión',
@@ -61,6 +101,7 @@ export const es = {
 
 /** French dictionary, checked against the English keys. */
 export const fr = {
+  ...en,
   'panels.unpinTooltip': "Retirer l'épingle de la barre latérale gauche",
   'panels.unpin': 'Désépingler {name} de la barre latérale',
   'session.new': 'Nouvelle séance',
@@ -75,6 +116,7 @@ export const fr = {
 
 /** German dictionary, checked against the English keys. */
 export const de = {
+  ...en,
   'panels.unpinTooltip': 'Von der linken Seitenleiste lösen',
   'panels.unpin': '{name} von der Seitenleiste lösen',
   'session.new': 'Neue Sitzung',
@@ -89,6 +131,26 @@ export const de = {
 
 /** Russian dictionary, checked against the English keys. */
 export const ru = {
+  ...en,
+  'instance.switch': 'Переключить инстанс DSH',
+  'instance.add': 'Подключить новый DSH',
+  'instance.dialog.title': 'Подключить инстанс DSH',
+  'instance.dialog.description': 'Укажи адрес DSH или одноразовую ссылку для входа.',
+  'instance.name': 'Название инстанса',
+  'instance.url': 'Адрес DSH или ссылка для входа',
+  'instance.url.placeholder': 'https://dsh.example.com или ссылка с token',
+  'instance.submit': 'Подключить и открыть',
+  'instance.cancel': 'Отмена',
+  'instance.local': 'Локальный DSH',
+  'instance.error.required': 'Укажи адрес DSH или ссылку для входа.',
+  'instance.error.invalid': 'Укажи корректный адрес DSH.',
+  'instance.error.credentials': 'Адрес не может содержать логин или пароль.',
+  'instance.error.path': 'Укажи корневой адрес DSH; ссылка входа может содержать только token.',
+  'instance.error.query': 'Ссылка входа должна содержать только один непустой token.',
+  'instance.error.insecure': 'Для удалённого DSH используй HTTPS.',
+  'instance.error.name': 'Название инстанса должно быть не длиннее 48 символов.',
+  'instance.error.limit': 'Можно сохранить не больше 32 инстансов.',
+  'instance.error.storage': 'Не удалось сохранить список инстансов.',
   'panels.unpinTooltip': 'Открепить от левой боковой панели',
   'panels.unpin': 'Открепить {name} от боковой панели',
   'session.new': 'Новая сессия',
@@ -103,6 +165,7 @@ export const ru = {
 
 /** Portuguese dictionary, checked against the English keys. */
 export const pt = {
+  ...en,
   'panels.unpinTooltip': 'Soltar da barra lateral esquerda',
   'panels.unpin': 'Desafixar {name} da barra lateral',
   'session.new': 'Nova sessão',
