@@ -10,9 +10,15 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 // Type-only: pulls the Session root standard-props merge.
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+// Type-only: pulls the settings section slot declaration into this package.
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { SidebarPanelMetadata, SidebarRootInjected } from './contract/slots.ts'
 import { HeaderLeadingControls } from './HeaderLeadingControls.tsx'
 import { SidebarRoot } from './SidebarRoot.tsx'
+import { InstanceSettingsSection } from './InstanceSettingsSection.tsx'
+import { createInstanceRegistryStore } from './instance-registry-store.ts'
+import { clearTransferredRegistry, readInitialInstanceRegistry, writeInstanceRegistry } from './instance-registry.ts'
+import type { DshInstance } from './instance-registry.ts'
 import { en, zh, type SidebarKey } from './locales.ts'
 
 export type {
@@ -45,6 +51,16 @@ export const inject = ['slots', 'layout', 'uiWorkspace', 'locale', 'shortcuts']
 export function apply(ctx: ClientContext): void {
   const workspaceNavigation = ctx.get('uiWorkspace') as unknown as WorkspaceNavigation
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-sidebar: dictionaries')
+  const t = ctx.locale.bind(NS)
+  const storage = (() => {
+    try { return window.localStorage } catch { return null }
+  })()
+  const initialRegistry = readInitialInstanceRegistry(window.location.href, storage, t('instance.local'))
+  const registryStore = createInstanceRegistryStore(initialRegistry.instances)
+  writeInstanceRegistry(storage, initialRegistry.instances)
+  if (initialRegistry.hasTransfer) clearTransferredRegistry(window.history, window.location.href)
+  const writeInstances = (instances: readonly DshInstance[]): boolean =>
+    writeInstanceRegistry(storage, instances)
   const panels = createSnapshotStore<readonly SidebarPanelMetadata[]>([])
   const syncPanels = (): void => {
     const next = ctx.slots.entriesOfSlot('sidebar.panellist').map(({ options }) => {
@@ -85,8 +101,18 @@ export function apply(ctx: ClientContext): void {
       'sidebar.settings': { kind: 'single', scope: 'root' },
       'sidebar.footer.action': { kind: 'list', scope: 'root' },
     },
+    store: registryStore,
     inject: injectProps,
   }, SidebarRoot))
+  ctx.slots.inject('settings.section', () => ctx.slots.register({
+    name: 'settings.section',
+    id: 'dsh-instances',
+    order: 30,
+    label: () => t('instance.section'),
+    locale: NS,
+    store: registryStore,
+    inject: () => ({ writeInstances }),
+  }, InstanceSettingsSection))
   // macOS desktop hides the collapsed sidebar entirely, so the open/New
   // Session controls move into the frame's window-chrome seat beside the
   // traffic lights; the occupant reuses the shell's injected actions, and
