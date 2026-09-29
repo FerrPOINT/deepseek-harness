@@ -13,7 +13,17 @@ export const zh = {
   'panels.more': '更多',
   'version.copied': '版本号复制成功',
   'instance.switch': '切换 DSH 实例',
+  'instance.manage': '管理 DSH 实例',
+  'instance.manage.title': 'DSH 实例',
+  'instance.manage.description': '选择、添加、编辑或移除实例。',
+  'instance.current': '当前',
+  'instance.edit': '编辑',
+  'instance.edit.title': '编辑 DSH 实例',
+  'instance.delete': '删除',
+  'instance.delete.confirm': '确认删除',
+  'instance.back': '返回列表',
   'instance.add': '连接新的 DSH',
+  'instance.add.title': '连接 DSH 实例',
   'instance.dialog.title': '连接 DSH 实例',
   'instance.dialog.description': '输入 DSH 地址或一次性登录链接。',
   'instance.name': '实例名称',
@@ -31,6 +41,8 @@ export const zh = {
   'instance.error.name': '实例名称不能超过 48 个字符。',
   'instance.error.limit': '最多可保存 32 个实例。',
   'instance.error.storage': '无法保存实例列表。',
+  'instance.error.duplicate': '这个 DSH 地址已经在列表中。',
+  'instance.error.last': '至少需要保留一个 DSH 实例。',
 } satisfies Record<string, string>
 
 /** The sidebar namespace key union. */
@@ -49,7 +61,17 @@ export const en = {
   'panels.more': 'More',
   'version.copied': 'Version copied',
   'instance.switch': 'Switch DSH instance',
+  'instance.manage': 'Manage DSH instances',
+  'instance.manage.title': 'DSH instances',
+  'instance.manage.description': 'Select, add, edit, or remove an instance.',
+  'instance.current': 'current',
+  'instance.edit': 'Edit',
+  'instance.edit.title': 'Edit DSH instance',
+  'instance.delete': 'Delete',
+  'instance.delete.confirm': 'Confirm delete',
+  'instance.back': 'Back to list',
   'instance.add': 'Connect new DSH',
+  'instance.add.title': 'Connect DSH instance',
   'instance.dialog.title': 'Connect DSH instance',
   'instance.dialog.description': 'Enter a DSH address or a one-time sign-in link.',
   'instance.name': 'Instance name',
@@ -67,6 +89,8 @@ export const en = {
   'instance.error.name': 'The instance name must be 48 characters or fewer.',
   'instance.error.limit': 'You can save up to 32 instances.',
   'instance.error.storage': 'The instance list could not be saved.',
+  'instance.error.duplicate': 'This DSH address is already in the list.',
+  'instance.error.last': 'Keep at least one DSH instance.',
 } satisfies Record<SidebarKey, string>
 
 /** Japanese copy, checked against the English keys. */
