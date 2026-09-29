@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 /** Sidebar shell slot registration and its Session/layout callbacks. */
 import { Context, type Fiber } from '@deepseek-ai/cordis'
@@ -86,7 +87,7 @@ describe('ui-sidebar apply', () => {
     expect(leading[0]!.locale).toBe('sidebar')
     expect(leading[0]!.inject).toBe(b.slots.entries('sidebar')[0]!.inject)
     const injected = (b.slots.entries('sidebar')[0]!.inject as () => SidebarRootInjected)()
-    expect(Object.keys(injected)).toEqual(['startSession', 'toggleSidebar', 'selectPanel', 'setPinned', 'trackEntryClick', 'hooks'])
+    expect(Object.keys(injected)).toEqual(['startSession', 'toggleSidebar', 'openInstance', 'selectPanel', 'setPinned', 'trackEntryClick', 'hooks'])
     expect(injected.hooks.panels.getSnapshot()).toEqual([])
     expect(injected.hooks.entryPins.getSnapshot()).toEqual([])
     expect(injected.hooks.entryActions.getSnapshot()).toBe(false)

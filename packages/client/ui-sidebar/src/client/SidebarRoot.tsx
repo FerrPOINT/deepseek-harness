@@ -165,6 +165,7 @@ export function SidebarRoot({
   useShortcuts,
   usePanelInfo,
   useStore,
+  openInstance,
   t,
   renderSlot,
   renderFactorySlot,
@@ -343,6 +344,7 @@ export function SidebarRoot({
             {...(buildVersion === undefined ? {} : { buildVersion })}
             t={t}
             useStore={useStore}
+            openInstance={openInstance}
           />
         )}
         {!darwinDesktop && toggle}

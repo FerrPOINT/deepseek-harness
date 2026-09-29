@@ -85,6 +85,7 @@ function mountShell({ collapsed = false, width = 300, drawer = false, shortcuts 
       startSession={startSession} toggleSidebar={toggleSidebar} trackEntryClick={trackEntryClick} t={t}
       renderFactorySlot={() => null}
       useStore={useInstanceStore}
+      openInstance={() => {}}
       renderSlot={((
         key: string,
         owner: SidebarFooterActionOwnerProps | SidebarSectionOwnerProps | SidebarSessionActionOwnerProps | SidebarSettingsOwnerProps,
@@ -205,17 +206,12 @@ describe('SidebarRoot shell', () => {
     vi.stubEnv('DSH_CLIENT_VERSION', '1.2.3')
     const b = mountShell()
     expect(screen.getByTestId('custom-brand-mark')).toBeTruthy()
-    expect(screen.getByTestId('custom-brand-name')).toBeTruthy()
-    // Expanded, both the wordmark and the capsule start a session and report a sidebar New Session click first.
+    expect(screen.getByRole('button', { name: 'Switch DSH instance: Local DSH' })).toBeTruthy()
+    // The instance selector replaces the former clickable wordmark.
     const starters = screen.getAllByRole('button', { name: 'New session' })
-    expect(starters).toHaveLength(2)
+    expect(starters).toHaveLength(1)
     for (const button of starters) fireEvent.click(button)
-    expect(b.startSession).toHaveBeenCalledTimes(2)
-    expect(b.trackEntryClick.mock.calls).toEqual([
-      [{ menu_name: 'new_session', position: 'sidebar' }],
-      [{ menu_name: 'new_session', position: 'sidebar' }],
-    ])
-    expect(b.trackEntryClick.mock.invocationCallOrder[0]).toBeLessThan(b.startSession.mock.invocationCallOrder[0]!)
+    expect(b.startSession).toHaveBeenCalledOnce()
     fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
     expect(b.toggleSidebar).toHaveBeenCalledOnce()
     expect(b.trackEntryClick).toHaveBeenCalledTimes(2)
@@ -260,7 +256,7 @@ describe('SidebarRoot shell', () => {
     expect(startSession).not.toHaveBeenCalled()
   })
 
-  it('renders generic brand fallbacks when no package fills the slots', () => {
+  it('renders the local instance and build badge when no brand mark is registered', () => {
     vi.stubEnv('DSH_CLIENT_COMMIT_HASH', '0123456')
     vi.stubEnv('DSH_CLIENT_GIT_DIRTY', 'true')
     vi.stubEnv('DSH_CLIENT_VERSION', '1.2.3-rc.4')
@@ -276,11 +272,12 @@ describe('SidebarRoot shell', () => {
       startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
       renderFactorySlot={() => null}
       useStore={useInstanceStore}
+      openInstance={() => {}}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
 
-    expect(screen.getByText('DSH Local Build')).toBeTruthy()
+    expect(screen.getByText('Local DSH')).toBeTruthy()
     expect(screen.getByText('1.2.3-rc.4-0123456-dirty')).toBeTruthy()
     expect(container.querySelector('svg')).not.toBeNull()
   })
@@ -302,11 +299,12 @@ describe('SidebarRoot shell', () => {
       startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
       renderFactorySlot={() => null}
       useStore={useInstanceStore}
+      openInstance={() => {}}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
 
-    expect(screen.getByText('DSH Local Build')).toBeTruthy()
+    expect(screen.getByText('Local DSH')).toBeTruthy()
     expect(screen.getByText(expected)).toBeTruthy()
   })
 
@@ -384,11 +382,12 @@ describe('SidebarRoot shell', () => {
       startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
       renderFactorySlot={() => null}
       useStore={useInstanceStore}
+      openInstance={() => {}}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
 
-    expect(screen.getByText('DSH Local Build')).toBeTruthy()
+    expect(screen.getByText('Local DSH')).toBeTruthy()
   })
 
   it('hands the region its wide flag and clamps expandSidebar to the collapsed state', () => {
@@ -457,6 +456,7 @@ describe('SidebarRoot shell', () => {
       startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
       renderFactorySlot={() => null}
       useStore={useInstanceStore}
+      openInstance={() => {}}
       renderSlot={((key: string) => key === 'sidebar.toggle.badge'
         ? <Tooltip label="Update — V1.2.3"><span data-testid="badge" /></Tooltip>
         : null) as SidebarRootComponentProps['renderSlot']}
