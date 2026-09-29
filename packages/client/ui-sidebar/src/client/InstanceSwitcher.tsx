@@ -2,7 +2,6 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { IconChevronDownOutlineRegular, Menu } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SidebarRootComponentProps } from './contract/slots.ts'
-import { withInstanceRegistry } from './instance-registry.ts'
 import type { DshInstance } from './instance-registry.ts'
 import css from './InstanceSwitcher.module.css'
 
@@ -10,11 +9,12 @@ import css from './InstanceSwitcher.module.css'
  * @param props Brand mark, build version, and sidebar translator.
  * @returns A styled DSH instance menu.
  */
-export function InstanceSwitcher({ mark, buildVersion, t, useStore }: {
+export function InstanceSwitcher({ mark, buildVersion, t, useStore, openInstance }: {
   mark: ReactNode
   buildVersion?: string
   t: SidebarRootComponentProps['t']
   useStore: SidebarRootComponentProps['useStore']
+  openInstance: SidebarRootComponentProps['openInstance']
 }) {
   const instances = useStore(state => state.instances)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -25,7 +25,7 @@ export function InstanceSwitcher({ mark, buildVersion, t, useStore }: {
   const selectInstance = (selectedUrl: string): void => {
     setMenuOpen(false)
     if (selectedUrl === currentUrl) return
-    window.location.assign(withInstanceRegistry(selectedUrl, instances))
+    openInstance(selectedUrl)
   }
 
   return (

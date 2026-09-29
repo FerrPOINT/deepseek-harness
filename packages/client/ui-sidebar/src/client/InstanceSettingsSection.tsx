@@ -7,7 +7,7 @@ import {
 import type { InjectFace, PropsLocale, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { createInstanceRegistryStore } from './instance-registry-store.ts'
 import type { DshInstance, InstanceInputError } from './instance-registry.ts'
-import { parseInstanceInput, withInstanceRegistry } from './instance-registry.ts'
+import { parseInstanceInput } from './instance-registry.ts'
 import type { SidebarKey } from './locales.ts'
 import css from './InstanceSettingsSection.module.css'
 
@@ -27,6 +27,8 @@ const errorKeys: Record<InstanceInputError | 'name' | 'limit' | 'duplicate', Sid
 export interface InstanceSettingsSectionInjected {
   /** Persist the roster to this origin's browser storage. */
   writeInstances: (instances: readonly DshInstance[]) => boolean
+  /** Open an instance address. */
+  openInstance: (url: string) => void
 }
 
 /** Full settings-section props: shell owner, locale, shared roster store, and persistence. */
@@ -47,7 +49,7 @@ function defaultName(url: string, localName: string): string {
  * @param props Current roster, localized copy, and persistence action.
  * @returns The instance-management settings page.
  */
-export function InstanceSettingsSection({ useStore, actions, writeInstances, t }: InstanceSettingsSectionProps) {
+export function InstanceSettingsSection({ useStore, actions, writeInstances, openInstance, t }: InstanceSettingsSectionProps) {
   const instances = useStore(state => state.instances)
   const [statusByUrl, setStatusByUrl] = useState<Record<string, 'checking' | 'available' | 'unavailable'>>({})
   const [formOpen, setFormOpen] = useState(false)
@@ -69,7 +71,7 @@ export function InstanceSettingsSection({ useStore, actions, writeInstances, t }
 
   const selectInstance = (instanceUrl: string): void => {
     if (instanceUrl === currentUrl) return
-    window.location.assign(withInstanceRegistry(instanceUrl, instances))
+    openInstance(instanceUrl)
   }
 
   const checkInstance = (instance: DshInstance): void => {
@@ -120,7 +122,7 @@ export function InstanceSettingsSection({ useStore, actions, writeInstances, t }
 
     setFormOpen(false)
     setFormError(null)
-    if (parsed.launchUrl !== null) window.location.assign(withInstanceRegistry(parsed.launchUrl, next))
+    if (parsed.launchUrl !== null) openInstance(parsed.launchUrl)
   }
 
   const deleteInstance = (instance: DshInstance): void => {
@@ -135,7 +137,7 @@ export function InstanceSettingsSection({ useStore, actions, writeInstances, t }
     setPageError(null)
     if (instance.url === currentUrl) {
       const destination = next[0]
-      if (destination !== undefined) window.location.assign(withInstanceRegistry(destination.url, next))
+      if (destination !== undefined) openInstance(destination.url)
     }
   }
 

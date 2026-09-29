@@ -1,7 +1,6 @@
 const STORAGE_KEY = 'dsh.client.instances.v1'
 const TRANSFER_KEY = 'dsh-switcher'
 const MAX_INSTANCES = 32
-const MAX_TRANSFER_BYTES = 65_536
 
 export type InstanceInputError = 'required' | 'invalid' | 'credentials' | 'path' | 'query' | 'insecure'
 
@@ -16,7 +15,6 @@ export type InstanceInputResult =
 
 export interface InitialInstanceRegistry {
   instances: DshInstance[]
-  hasTransfer: boolean
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -91,32 +89,11 @@ function parseStoredInstances(value: unknown): DshInstance[] {
   return instances
 }
 
-function decodeTransfer(encoded: string | null): DshInstance[] {
-  if (encoded === null || encoded.length > MAX_TRANSFER_BYTES * 2) return []
-  try {
-    const base64 = decodeURIComponent(encoded).replace(/-/gu, '+').replace(/_/gu, '/')
-    const binary = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='))
-    if (binary.length > MAX_TRANSFER_BYTES) return []
-    const bytes = Uint8Array.from(binary, character => character.charCodeAt(0))
-    return parseStoredInstances(JSON.parse(new TextDecoder().decode(bytes)))
-  } catch {
-    return []
-  }
-}
-
-function mergeInstances(...groups: (readonly DshInstance[])[]): DshInstance[] {
-  const merged = new Map<string, DshInstance>()
-  for (const group of groups) {
-    for (const instance of group) merged.set(instance.url, instance)
-  }
-  return [...merged.values()].slice(-MAX_INSTANCES)
-}
-
-/** Read saved instances, import a carried roster, and ensure the current DSH appears.
+/** Read this origin's saved instances and ensure the current DSH appears.
  * @param href Current page URL.
  * @param storage Browser storage for this origin, when available.
  * @param localName Localized name for an unregistered loopback instance.
- * @returns The merged instance list and whether a transfer fragment was present.
+ * @returns This origin's saved instance list.
  */
 export function readInitialInstanceRegistry(
   href: string,
@@ -132,10 +109,7 @@ export function readInitialInstanceRegistry(
   }
 
   const currentUrl = new URL(href).origin
-  const fragment = new URLSearchParams(new URL(href).hash.slice(1))
-  const transferValue = fragment.get(TRANSFER_KEY)
-  const carried = decodeTransfer(transferValue)
-  const instances = mergeInstances(stored, carried)
+  const instances = stored
   if (!instances.some(instance => instance.url === currentUrl)) {
     const current = new URL(currentUrl)
     instances.push({
@@ -143,7 +117,7 @@ export function readInitialInstanceRegistry(
       url: currentUrl,
     })
   }
-  return { instances: instances.slice(-MAX_INSTANCES), hasTransfer: transferValue !== null }
+  return { instances: instances.slice(-MAX_INSTANCES) }
 }
 
 /** Persist the browser-local instance roster.
@@ -160,28 +134,15 @@ export function writeInstanceRegistry(storage: Pick<Storage, 'setItem'> | null, 
   }
 }
 
-/** Carry the validated roster in a URL fragment while navigating to another DSH origin.
- * @param urlValue Destination DSH origin or one-time login URL.
- * @param instances Validated instances to make available at the destination.
- * @returns Destination URL with the encoded registry fragment.
- */
-export function withInstanceRegistry(urlValue: string, instances: readonly DshInstance[]): string {
-  const bytes = new TextEncoder().encode(JSON.stringify(instances))
-  let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  const encoded = btoa(binary).replace(/\+/gu, '-').replace(/\//gu, '_').replace(/=+$/gu, '')
-  const url = new URL(urlValue)
-  url.hash = `${TRANSFER_KEY}=${encoded}`
-  return url.href
-}
-
-/** Remove the one-time roster fragment after the client imports it.
+/** Remove an obsolete roster fragment without importing its contents.
  * @param history Current browser history object.
  * @param href Current page URL.
  */
-export function clearTransferredRegistry(history: Pick<History, 'replaceState' | 'state'>, href: string): void {
+export function clearLegacyInstanceTransfer(history: Pick<History, 'replaceState' | 'state'>, href: string): void {
   const url = new URL(href)
-  if (!new URLSearchParams(url.hash.slice(1)).has(TRANSFER_KEY)) return
-  url.hash = ''
-  history.replaceState(history.state, '', `${url.pathname}${url.search}`)
+  const fragment = new URLSearchParams(url.hash.slice(1))
+  if (!fragment.has(TRANSFER_KEY)) return
+  fragment.delete(TRANSFER_KEY)
+  url.hash = fragment.toString()
+  history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`)
 }
