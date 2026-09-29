@@ -19,7 +19,7 @@ import clsx from 'clsx'
 import {
   ConnectionIndicator, Tooltip, useModalLayer,
   IconAgentPresetOutlineMedium, IconArchiveOutlineMedium, IconCloseOutlineRegular, IconDataOutlineMedium,
-  IconPersonalizationOutlineMedium, IconSettingsOutlineMedium, IconUserOutlineMedium,
+  IconGlobeOutlineMedium, IconPersonalizationOutlineMedium, IconSettingsOutlineMedium, IconUserOutlineMedium,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConnectionIndicatorState } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SettingsRootComponentProps, SettingsSectionRow } from './shell-contract.ts'
@@ -36,6 +36,7 @@ function navIcon(id: string) {
   if (id === 'account') return <IconUserOutlineMedium size={16} />
   if (id === 'models') return <IconDataOutlineMedium size={16} />
   if (id === 'agent-presets') return <IconAgentPresetOutlineMedium size={16} />
+  if (id === 'dsh-instances') return <IconGlobeOutlineMedium size={16} />
   if (id === 'plugins') return <IconPersonalizationOutlineMedium size={16} />
   if (id === 'archived-sessions') return <IconArchiveOutlineMedium size={16} />
   return <IconSettingsOutlineMedium size={16} />

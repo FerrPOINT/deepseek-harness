@@ -1,0 +1,91 @@
+.section {
+  display: flex;
+  max-width: 720px;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--dsw-alias-label-primary);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.header > button { flex: none; white-space: nowrap; }
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.description {
+  margin: 4px 0 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.list { display: grid; gap: 8px; margin-top: 4px; }
+
+.card {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0.5px solid var(--dsw-alias-settings-card-stroke);
+  border-radius: var(--dsw-radius-xl);
+  background: var(--dsw-alias-settings-card-fill);
+}
+
+.instanceButton {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  justify-content: start;
+  gap: 8px;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--dsw-radius-sm);
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.instanceButton:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.instanceButton:focus-visible, .iconButton:focus-visible { outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)); outline-offset: -2px; }
+.instanceName { overflow: hidden; font-size: 13px; font-weight: 500; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.current { padding: 1px 6px; border-radius: var(--dsw-radius-xs); background: var(--dsw-alias-bg-module-platform); color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 16px; white-space: nowrap; }
+.instanceUrl { overflow: hidden; color: var(--dsw-alias-label-caption); font-size: 12px; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
+.actions { display: inline-flex; flex: none; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; }
+.status { color: var(--dsw-alias-label-caption); font-size: 11px; line-height: 16px; white-space: nowrap; }
+.status[data-instance-status='available'] { color: var(--dsw-alias-state-success-primary); }
+.status[data-instance-status='unavailable'] { color: var(--dsw-alias-state-error-primary); }
+.checkButton { padding: 5px 6px; border: 0; border-radius: var(--dsw-radius-sm); background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; font: inherit; font-size: 12px; white-space: nowrap; }
+.checkButton:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.checkButton:focus-visible { outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)); outline-offset: -2px; }
+.checkButton:disabled { cursor: wait; opacity: .6; }
+.iconButton { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; border: 0; border-radius: var(--dsw-radius-sm); background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; }
+.iconButton:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.iconButton:disabled { cursor: not-allowed; opacity: .4; }
+.deleteConfirm { display: inline-flex; align-items: center; gap: 5px; }
+.deleteConfirm button { padding: 5px 6px; border: 0; border-radius: var(--dsw-radius-sm); background: transparent; color: var(--dsw-alias-state-error-primary); cursor: pointer; font-size: 12px; white-space: nowrap; }
+.deleteConfirm button:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.error { margin: 0; color: var(--dsw-alias-state-error-primary); font-size: 12px; line-height: 18px; }
+.dialog { width: min(480px, calc(100vw - 48px)); }
+.form { display: grid; gap: 14px; }
+.field { display: grid; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 12px; }
+
+@media (max-width: 700px) {
+  .header { align-items: stretch; flex-direction: column; }
+  .card { align-items: flex-start; }
+  .instanceButton { grid-template-columns: auto auto; }
+  .instanceUrl { grid-column: 1 / -1; }
+}
