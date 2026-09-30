@@ -48,6 +48,8 @@ Saved model selections override the composition default. The settings card accep
 
 The default permission preset is `danger-full-access`: commands run without a sandbox and without approval prompts, within the rights of the operating-system account running DSH. Use this only on a trusted machine and workspace; it does not grant operating-system administrator rights.
 
+The Web profile also installs and mounts Codex delegation and read-only TypeScript/JavaScript navigation. Codex uses native authentication configured on the target machine and bypasses Codex approvals and sandbox; its child process remains limited to the operating-system account. The TypeScript language server installs within the profile and its path is resolved from that profile. The Playwright MCP provider remains an experimental opt-in.
+
 ### Configuration
 
 The `minimal` agent preset uses a persistent shell, the `read_image` tool, and a fixed persona, with automatic history compaction and the idle-session `/compact` command. It shares the Host token meter and owns an isolated compaction backend. [Compaction configuration and retention](../../compaction/compaction-basic/README.md#use-this-package) follow the existing backend. Image reads reuse the Host filesystem and attachment store and require an image-capable model; text read, write, and edit tools remain excluded.

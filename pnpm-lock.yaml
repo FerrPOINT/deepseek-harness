@@ -3217,6 +3217,12 @@ importers:
       '@deepseek-ai/dsh-launch-environment':
         specifier: workspace:*
         version: link:../../util/launch-environment
+      '@deepseek-ai/dsh-lsp':
+        specifier: workspace:*
+        version: link:../../lsp/lsp
+      '@deepseek-ai/dsh-lsp-stdio':
+        specifier: workspace:*
+        version: link:../../lsp/lsp-stdio
       '@deepseek-ai/dsh-mcp-manager':
         specifier: workspace:*
         version: link:../../mcp/mcp-manager
@@ -3262,6 +3268,9 @@ importers:
       '@deepseek-ai/dsh-skill-office':
         specifier: workspace:*
         version: link:../../skill/skill-office
+      '@deepseek-ai/dsh-subagent-codex':
+        specifier: workspace:*
+        version: link:../../subagent/subagent-codex
       '@deepseek-ai/dsh-subprocess':
         specifier: workspace:*
         version: link:../../subprocess/subprocess
@@ -3301,6 +3310,9 @@ importers:
       '@deepseek-ai/dsh-tool-jobs':
         specifier: workspace:*
         version: link:../../jobs/tool-jobs
+      '@deepseek-ai/dsh-tool-lsp':
+        specifier: workspace:*
+        version: link:../../lsp/tool-lsp
       '@deepseek-ai/dsh-tool-office':
         specifier: workspace:*
         version: link:../../document/tool-office
@@ -3358,6 +3370,12 @@ importers:
       open:
         specifier: ^11.0.2
         version: 11.0.4
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      typescript-language-server:
+        specifier: 5.3.0
+        version: 5.3.0
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:~

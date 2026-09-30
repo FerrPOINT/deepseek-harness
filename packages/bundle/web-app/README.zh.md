@@ -48,6 +48,8 @@ dsh --profile web --no-open --port 8080
 
 默认权限预设为 `danger-full-access`：命令在无沙箱且不请求确认的情况下运行，权限范围不超过运行 DSH 的操作系统账户。仅在可信机器和工作区使用；该预设不会授予操作系统管理员权限。
 
+Web profile 还会安装并挂载 Codex 委派和只读 TypeScript/JavaScript 导航。Codex 使用目标机器上已有的原生认证，并绕过 Codex 自身的确认与沙箱；子进程权限仍受操作系统账户限制。TypeScript language server 安装在 profile 内，启动路径也根据该 profile 解析。Playwright MCP provider 仍是可选的实验性功能。
+
 ### 配置
 
 `minimal` agent preset 使用持久 Shell、`read_image` 工具和固定 persona，支持自动历史压缩以及会话空闲时的 `/compact` 命令。它复用 Host token meter，并拥有隔离的压缩后端。[压缩配置与保留策略](../../compaction/compaction-basic/README.zh.md#use-this-package) 沿用现有后端。图片读取复用 Host 文件系统和附件存储，要求模型支持图片输入；不加载文本读取、写入和编辑工具。

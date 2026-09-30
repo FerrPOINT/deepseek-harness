@@ -147,6 +147,7 @@ External packages installed for runtime use or embedded in distributed Host or b
 | [`tsx`](https://github.com/privatenumber/tsx) | MIT |
 | [`turndown`](https://github.com/mixmark-io/turndown) | MIT |
 | [`typescript`](https://github.com/microsoft/TypeScript) | Apache-2.0 |
+| [`typescript-language-server`](https://github.com/typescript-language-server/typescript-language-server) | Apache-2.0 |
 | [`undici`](https://github.com/nodejs/undici) | MIT |
 | [`use-sync-external-store`](https://github.com/facebook/react) | MIT |
 | [`which`](https://github.com/isaacs/node-which) | ISC |
@@ -276,7 +277,6 @@ External packages **directly declared** for development, tests, types, or toolin
 | [`spdx-expression-parse`](https://github.com/jslicense/spdx-expression-parse.js) | MIT |
 | [`tencentcloud-sdk-nodejs-teo`](https://github.com/tencentcloud/tencentcloud-sdk-nodejs) | Apache-2.0 |
 | [`tsdown`](https://github.com/rolldown/tsdown) | MIT |
-| [`typescript-language-server`](https://github.com/typescript-language-server/typescript-language-server) | Apache-2.0 |
 | [`vite`](https://github.com/vitejs/vite) | MIT |
 | [`vite-tsconfig-paths`](https://github.com/aleclarson/vite-tsconfig-paths) | MIT |
 | [`vitepress`](https://github.com/vuejs/vitepress) | MIT |
