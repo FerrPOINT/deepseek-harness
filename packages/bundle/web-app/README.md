@@ -13,7 +13,7 @@ Desktop analytics schedules partial batches every 30 seconds, with a 15-second e
 
 ## Summary
 
-Run `dsh --profile web` to open an interactive browser GUI with chat, model and settings management, and session history. Its first-run defaults match the FerrPOINT Web setup: Russian UI, dark theme, OpenRouter with DeepSeek V4.1 Flash at 256K context, and the full-access permission preset. Startup prints an authenticated URL and normally opens it in the default browser; SSH sessions and `--no-open` leave the URL for manual opening. You can change the port and allow extra hosts, but cannot bind all network interfaces. Choose this package for interactive browser work; use `dsh-headless` for one-shot command-line tasks.
+Run `dsh --profile web` for chat, model settings, and session history. New profiles default to Russian, a dark theme, OpenRouter DeepSeek V4.1 Flash (256K context), full-access permissions, Codex delegation, and read-only TypeScript/JavaScript navigation. Startup prints an authenticated URL and normally opens it; SSH and `--no-open` leave it for manual use. The server accepts only loopback by default. Choose this package for interactive work; use `dsh-headless` for one-shot tasks.
 
 ## Table of Contents
 
@@ -45,6 +45,8 @@ After startup you see a `dsh web:` line whose root URL carries a fresh process t
 Saved model selections override the composition default. The settings card accepts compatible API addresses and credential references.
 
 The default permission preset is `danger-full-access`: commands run without a sandbox and without approval prompts, within the rights of the operating-system account running DSH. Use this only on a trusted machine and workspace; it does not grant operating-system administrator rights.
+
+The Web profile also installs and mounts Codex delegation and read-only TypeScript/JavaScript navigation. Codex uses native authentication configured on the target machine and bypasses Codex approvals and sandbox; its child process remains limited to the operating-system account. The TypeScript language server installs within the profile and its path is resolved from that profile. The Playwright MCP provider remains an experimental opt-in.
 
 ### Configuration
 

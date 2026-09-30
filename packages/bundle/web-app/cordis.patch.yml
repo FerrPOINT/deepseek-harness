@@ -619,3 +619,33 @@
       name: '@deepseek-ai/dsh-agent-preset-registry'
       config:
         default: standard
+
+# The maintained Web profile includes the coding tools used by this fork.
+- insert:
+    - id: subagent-codex
+      name: '@deepseek-ai/dsh-subagent-codex'
+      config:
+        permissionMode: dangerously-bypass-approvals-and-sandbox
+
+    - id: lsp
+      name: '@deepseek-ai/dsh-lsp'
+
+    - id: lsp-stdio
+      name: '@deepseek-ai/dsh-lsp-stdio'
+      config:
+        servers:
+          typescript:
+            command: !!js process.execPath
+            args: !!js "[ctx.get('profileContext').dir + '/node_modules/typescript-language-server/lib/cli.mjs', '--stdio']"
+            extensionToLanguage:
+              .ts: typescript
+              .mts: typescript
+              .cts: typescript
+              .tsx: typescriptreact
+              .js: javascript
+              .mjs: javascript
+              .cjs: javascript
+              .jsx: javascriptreact
+
+    - id: tool-lsp
+      name: '@deepseek-ai/dsh-tool-lsp'

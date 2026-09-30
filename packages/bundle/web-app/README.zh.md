@@ -13,7 +13,7 @@ kind: "package-bundle"
 
 ## 概述
 
-运行 `dsh --profile web`，打开提供聊天、模型与设置管理以及会话历史的交互式浏览器 GUI。首次运行默认值与 FerrPOINT Web 环境一致：俄语界面、深色主题、通过 OpenRouter 使用 256K 上下文的 DeepSeek V4.1 Flash，以及完全访问权限预设。启动时会打印带认证信息的 URL，通常还会在默认浏览器中打开；SSH 会话和 `--no-open` 会保留该 URL，供你手动打开。你可以更改端口并允许额外主机，但不能绑定所有网络接口。需要在浏览器中交互式工作时选择本包；一次性的命令行任务应使用 `dsh-headless`。
+运行 `dsh --profile web`，即可使用聊天、模型设置和会话历史。新 profile 默认启用俄语界面、深色主题、OpenRouter DeepSeek V4.1 Flash（256K 上下文）、完全访问权限、Codex 委派，以及只读的 TypeScript/JavaScript 代码导航。启动时会打印认证 URL，通常也会在默认浏览器中打开；SSH 会话和 `--no-open` 会保留该 URL，供你手动打开。服务器默认只接受本机连接。交互式工作请选择本包；一次性命令行任务请用 `dsh-headless`。
 
 ## 目录
 
@@ -45,6 +45,8 @@ dsh --profile web --no-open --port 8080
 已保存的模型选择覆盖组合默认值。设置卡接受兼容的 API 地址与凭据引用。
 
 默认权限预设为 `danger-full-access`：命令在无沙箱且不请求确认的情况下运行，权限范围不超过运行 DSH 的操作系统账户。仅在可信机器和工作区使用；该预设不会授予操作系统管理员权限。
+
+Web profile 还会安装并挂载 Codex 委派和只读 TypeScript/JavaScript 导航。Codex 使用目标机器上已有的原生认证，并绕过 Codex 自身的确认与沙箱；子进程权限仍受操作系统账户限制。TypeScript language server 安装在 profile 内，启动路径也根据该 profile 解析。Playwright MCP provider 仍是可选的实验性功能。
 
 ### 配置
 

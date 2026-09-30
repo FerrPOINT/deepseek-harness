@@ -1,4 +1,5 @@
 /** Portable first-run settings shipped with the Web profile. */
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { composeEntries, loadOverlayPatches } from '@deepseek-ai/dsh-app-boot'
 import { expect, it } from 'vitest'
@@ -30,4 +31,26 @@ it('ships the current OpenRouter model, locale, and permission defaults without 
   expect(config('locale')).toMatchObject({ preference: 'ru-pro' })
   expect(config('ui-theme')).toMatchObject({ preference: 'dark', fontSize: 14 })
   expect(config('permission')).toMatchObject({ defaultPreset: 'danger-full-access' })
+})
+
+it('ships coding providers and their runtime dependencies with the Web profile', () => {
+  expect(rows.map(row => row.id)).toEqual(expect.arrayContaining([
+    'subagent-codex', 'lsp', 'lsp-stdio', 'tool-lsp',
+  ]))
+  expect(config('subagent-codex')).toMatchObject({
+    permissionMode: 'dangerously-bypass-approvals-and-sandbox',
+  })
+  expect(config('lsp-stdio')).toHaveProperty('servers.typescript')
+
+  const manifest = JSON.parse(readFileSync(fileURLToPath(new URL(
+    '../../../../../packages/bundle/web-app/package.json', import.meta.url,
+  )), 'utf8')) as { dependencies: Record<string, string> }
+  expect(manifest.dependencies).toMatchObject({
+    '@deepseek-ai/dsh-lsp': 'workspace:*',
+    '@deepseek-ai/dsh-lsp-stdio': 'workspace:*',
+    '@deepseek-ai/dsh-subagent-codex': 'workspace:*',
+    '@deepseek-ai/dsh-tool-lsp': 'workspace:*',
+    'typescript': '6.0.3',
+    'typescript-language-server': '5.3.0',
+  })
 })
