@@ -111,6 +111,8 @@ export interface ConnectionIndexRequest extends ConnectionTrustRequest {
 
 /** Root/index response operations owned by the browser-token exchange. */
 export interface ConnectionIndexResponse {
+  /** Set a response header before the index server writes its status and body. */
+  setHeader(name: string, value: string): unknown
   writeHead(status: number, headers?: Readonly<Record<string, string>>): unknown
   end(body?: string): unknown
 }
@@ -222,9 +224,10 @@ export interface HostConnectionHandle {
   admit(request: ConnectionTrustRequest): PeerAdmission
 
   /**
-   * Authenticate one frontend index request, owning a token redirect or 401.
+   * Authenticate one frontend index request and refresh accepted session-cookie
+   * attributes before serving the index, owning a token redirect or 401.
    * @param request - root or configured-index HTTP request.
-   * @param response - response owned when the result is false.
+   * @param response - response for setting cookie updates, or owned when the result is false.
    * @returns true only when the frontend may serve index.html.
    */
   authorizeIndex(request: ConnectionIndexRequest, response: ConnectionIndexResponse): boolean

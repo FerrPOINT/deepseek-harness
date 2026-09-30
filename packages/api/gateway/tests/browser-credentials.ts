@@ -34,6 +34,7 @@ export function browserCookie(ctx: Context): string {
     url: `${target.pathname}${target.search}`,
     headers: { host: target.host },
   }, {
+    setHeader(name, value) { setCookie = name === 'set-cookie' ? value : setCookie },
     writeHead(_status, headers) { setCookie = headers?.['set-cookie'] },
     end() {},
   })

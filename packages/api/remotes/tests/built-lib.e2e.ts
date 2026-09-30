@@ -117,7 +117,7 @@ describe.skipIf(!requiredArtifacts)('Goal Remote built LIB chain', () => {
         throw new Error('Connection did not register exactly one /api route')
       }
       const server = createServer((request, response) => {
-        if ((request.url ?? '/').startsWith('/?')) {
+        if (request.url === '/' || (request.url ?? '/').startsWith('/?')) {
           if (host.connection.authorizeIndex(request, response)) {
             response.writeHead(200, { 'content-type': 'text/html' })
             response.end('<body>shell</body>')
@@ -140,6 +140,12 @@ describe.skipIf(!requiredArtifacts)('Goal Remote built LIB chain', () => {
         const setCookie = login.headers.get('set-cookie')
         if (login.status !== 303 || setCookie === null) throw new Error('browser token exchange failed')
         const cookie = setCookie.split(';', 1)[0]
+        const index = await fetch(origin + '/', { headers: { cookie }, redirect: 'manual' })
+        const refreshedCookie = index.headers.get('set-cookie')
+        if (index.status !== 200 || refreshedCookie === null
+          || !refreshedCookie.includes(cookie) || !refreshedCookie.endsWith('SameSite=Lax')) {
+          throw new Error('authenticated index did not refresh the browser cookie attributes')
+        }
         globalThis.fetch = (input, init = {}) => {
           const headers = new Headers(init.headers)
           headers.set('cookie', cookie)

@@ -119,7 +119,7 @@ function cookieValue(headerValue: string, name: string): string | undefined {
 
 /** Serialize the fixed browser-session attributes; generated names and values are cookie-safe base64url. */
 function sessionCookie(name: string, value: string, expiresAt: number, maxAgeSeconds: number): string {
-  return `${name}=${value}; Max-Age=${String(maxAgeSeconds)}; Path=/; Expires=${new Date(expiresAt).toUTCString()}; HttpOnly; SameSite=Strict`
+  return `${name}=${value}; Max-Age=${String(maxAgeSeconds)}; Path=/; Expires=${new Date(expiresAt).toUTCString()}; HttpOnly; SameSite=Lax`
 }
 
 function signature(secret: Buffer, body: string): Buffer {
@@ -228,11 +228,11 @@ export class BrowserAuth {
 
   /**
    * Authenticate an index request. A valid root query token mints the cookie
-   * and redirects to the directory-relative clean `./`; a valid cookie lets
-   * the caller serve the index; every other request receives the same minimal
-   * 401 response.
+   * and redirects to the directory-relative clean `./`; a valid cookie is
+   * reissued with current attributes before the caller serves the index; every
+   * other request receives the same minimal 401 response.
    * @param req - incoming root or configured-index request.
-   * @param res - response owned when this method returns false.
+   * @param res - response receiving cookie updates and owned when this method returns false.
    * @returns true only when the caller may serve index.html.
    */
   authorizeIndex(req: ConnectionIndexRequest, res: ConnectionIndexResponse): boolean {
@@ -262,7 +262,9 @@ export class BrowserAuth {
         res.end()
         return false
       }
-      if (req.method === 'GET' && url.pathname === '/' && this.isAuthenticated(req)) {
+      const session = this.authenticatedSession(req)
+      if (req.method === 'GET' && url.pathname === '/' && session !== undefined) {
+        this.refreshSessionCookie(res, session)
         res.writeHead(303, {
           'cache-control': 'no-store',
           'location': './',
@@ -274,7 +276,11 @@ export class BrowserAuth {
       this.writeUnauthorized(req, res)
       return false
     }
-    if (this.isAuthenticated(req)) return true
+    const session = this.authenticatedSession(req)
+    if (session !== undefined) {
+      this.refreshSessionCookie(res, session)
+      return true
+    }
     this.writeUnauthorized(req, res)
     return false
   }
@@ -285,18 +291,40 @@ export class BrowserAuth {
    * @returns true only for an unexpired cookie signed by this activation's loaded secret.
    */
   isAuthenticated(request: ConnectionTrustRequest): boolean {
+    return this.authenticatedSession(request) !== undefined
+  }
+
+  private authenticatedSession(request: ConnectionTrustRequest): {
+    authority: string
+    value: string
+    payload: BrowserCookiePayload
+  } | undefined {
     const authority = requestAuthority(request.headers)
     const rawCookie = header(request.headers, 'cookie')
-    if (authority === undefined || rawCookie === undefined) return false
+    if (authority === undefined || rawCookie === undefined) return undefined
     const value = cookieValue(rawCookie, cookieName(authority))
-    if (value === undefined) return false
+    if (value === undefined) return undefined
     const payload = decodeCookie(value, this.secret)
-    if (payload === undefined || payload.authority !== authority) return false
+    if (payload === undefined || payload.authority !== authority) return undefined
     const now = Date.now()
-    return payload.issuedAt <= now
+    if (!(payload.issuedAt <= now
       && payload.expiresAt > now
       && payload.expiresAt > payload.issuedAt
-      && payload.expiresAt - payload.issuedAt <= this.maxAgeMilliseconds
+      && payload.expiresAt - payload.issuedAt <= this.maxAgeMilliseconds)) return undefined
+    return { authority, value, payload }
+  }
+
+  private refreshSessionCookie(
+    response: ConnectionIndexResponse,
+    session: { authority: string; value: string; payload: BrowserCookiePayload },
+  ): void {
+    const maxAgeSeconds = Math.max(1, Math.ceil((session.payload.expiresAt - Date.now()) / 1000))
+    response.setHeader(
+      'set-cookie',
+      sessionCookie(
+        cookieName(session.authority), session.value, session.payload.expiresAt, maxAgeSeconds,
+      ),
+    )
   }
 
   private writeUnauthorized(req: ConnectionIndexRequest, res: ConnectionIndexResponse): void {

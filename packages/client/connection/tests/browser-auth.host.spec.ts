@@ -35,9 +35,12 @@ function response(): { value: ConnectionIndexResponse; state: ResponseState } {
   const state: ResponseState = {}
   return {
     value: {
+      setHeader(name, value) {
+        state.headers = { ...state.headers, [name]: value }
+      },
       writeHead(status, headers) {
         state.status = status
-        if (headers !== undefined) state.headers = headers
+        if (headers !== undefined) state.headers = { ...state.headers, ...headers }
       },
       end(body) {
         if (body !== undefined) state.body = body
@@ -105,7 +108,7 @@ describe('BrowserAuth', () => {
         'referrer-policy': 'no-referrer',
       },
     })
-    expect(login.state.headers?.['set-cookie']).toMatch(/; Max-Age=2592000; Path=\/; Expires=.*; HttpOnly; SameSite=Strict$/u)
+    expect(login.state.headers?.['set-cookie']).toMatch(/; Max-Age=2592000; Path=\/; Expires=.*; HttpOnly; SameSite=Lax$/u)
     expect(login.state.headers?.['set-cookie']).not.toContain('Secure')
     expect(first.isAuthenticated(request('/', '127.0.0.1:3080', { cookie: login.cookie }))).toBe(true)
     expect(first.isAuthenticated({
@@ -130,14 +133,13 @@ describe('BrowserAuth', () => {
       '127.0.0.1:3080',
       { cookie: login.cookie },
     ), redirected.value)).toBe(false)
-    expect(redirected.state).toEqual({
-      status: 303,
-      headers: {
-        'cache-control': 'no-store',
-        'location': './',
-        'referrer-policy': 'no-referrer',
-      },
+    expect(redirected.state.status).toBe(303)
+    expect(redirected.state.headers).toMatchObject({
+      'cache-control': 'no-store',
+      'location': './',
+      'referrer-policy': 'no-referrer',
     })
+    expect(redirected.state.headers?.['set-cookie']).toMatch(/; HttpOnly; SameSite=Lax$/u)
   })
 
   it('preserves the caller authority and mount while adding only this process token', async () => {
@@ -165,10 +167,13 @@ describe('BrowserAuth', () => {
 
   it('accepts the cookie for index serving and gives every unauthenticated request one response', async () => {
     const auth = await createAuth(new RecordCredentials())
-    const { cookie } = exchange(auth)
+    const { cookie, state: login } = exchange(auth)
     const allowed = response()
     expect(auth.authorizeIndex(request('/index.html', '127.0.0.1:3080', { cookie }), allowed.value)).toBe(true)
-    expect(allowed.state).toEqual({})
+    const refreshedCookie = allowed.state.headers?.['set-cookie']
+    expect(refreshedCookie).toMatch(/; HttpOnly; SameSite=Lax$/u)
+    expect(refreshedCookie).toContain(cookie)
+    expect(refreshedCookie).toContain(login.headers?.['set-cookie']?.match(/Expires=[^;]+/u)?.[0])
 
     for (const candidate of [
       request('/'),
