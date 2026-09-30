@@ -202,7 +202,7 @@ describe('DSH instance settings', () => {
       { name: 'Dev', url: 'https://dev.example.com' },
     ])
     fireEvent.click(screen.getByRole('button', { name: `${en['instance.edit']}: Dev` }))
-    expect(screen.getByLabelText(en['instance.url']).value).toBe('https://dev.example.com')
+    expect(screen.getByLabelText<HTMLInputElement>(en['instance.url']).value).toBe('https://dev.example.com')
     fireEvent.change(screen.getByLabelText(en['instance.url']), { target: { value: 'https://dev2.example.com' } })
     fireEvent.change(screen.getByLabelText(en['instance.name']), { target: { value: '  ' } })
     fireEvent.click(screen.getByRole('button', { name: en['instance.save'] }))
@@ -255,7 +255,7 @@ describe('DSH instance settings', () => {
 
   it('disables deleting the only remaining instance', () => {
     mount()
-    expect(screen.getByRole('button', { name: `${en['instance.delete']}: Current DSH` }).disabled).toBe(true)
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: `${en['instance.delete']}: Current DSH` }).disabled).toBe(true)
   })
 
   it('shows the checking state while a status request is pending', async () => {
