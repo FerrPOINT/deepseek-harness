@@ -11,7 +11,7 @@ Desktop product events use the optional [product analytics service](../product-a
 
 ## Summary
 
-The dsh web client sidebar lets users switch between DSH instances from a styled menu in the expanded brand row, start a new session, collapse navigation to a 56px rail, browse Workspaces and Sessions, and open Settings. Its Settings section manages the saved instance list. It preserves a bottom-pinned Settings entry and hides idle scrollbars without moving browser rows. New Session uses an explicitly selected Workspace, then the current Session's Workspace, then the most recently active Workspace; if none exists, it opens a blank New Session page. Deployments can replace the brand mark while retaining the navigation controls and rail geometry.
+The dsh web client sidebar lets users switch between DSH instances from a menu in the expanded brand row, start a new session, collapse navigation to a 56px rail, browse Workspaces and Sessions, and open Settings. Its Settings section manages the saved instance list. It preserves a bottom-pinned Settings entry and hides idle scrollbars without moving browser rows. New Session uses an explicitly selected Workspace, then the current Session's Workspace, then the most recently active Workspace; if none exists, it opens a blank New Session page. Deployments can replace the brand mark while retaining the navigation controls and rail geometry.
 
 ## Table of Contents
 

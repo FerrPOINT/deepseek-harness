@@ -2,17 +2,21 @@ const STORAGE_KEY = 'dsh.client.instances.v1'
 const TRANSFER_KEY = 'dsh-switcher'
 const MAX_INSTANCES = 32
 
+/** Localized failure key returned when a DSH instance address is rejected. */
 export type InstanceInputError = 'required' | 'invalid' | 'credentials' | 'path' | 'query' | 'insecure'
 
+/** A DSH server saved in the browser-local instance list. */
 export interface DshInstance {
   name: string
   url: string
 }
 
+/** Result of validating a DSH base address or one-time login URL. */
 export type InstanceInputResult =
   | { instance: DshInstance; launchUrl: string | null }
   | { error: InstanceInputError }
 
+/** Browser-local instance list initialized for the current page origin. */
 export interface InitialInstanceRegistry {
   instances: DshInstance[]
 }
