@@ -49,7 +49,7 @@ The editor uses redacted `CredentialInfo` to choose the saved-credential placeho
 
 ### OpenRouter usage
 
-The final **Limits** Settings entry reads the exact `openrouter` route through `llm/providerUsage` when opened and refreshes every minute while mounted. Its OpenRouter page shows daily, weekly, monthly, and lifetime spend, the active limit and remaining amount when present, keeps the last successful snapshot after a refresh failure, and links to OpenRouter Activity, API Keys, and Credits. The Host resolves the credential and returns only normalized counters; the browser never receives the key.
+The final **Limits** Settings entry reads the exact `openrouter` route through `llm/providerUsage` when opened and refreshes every minute while mounted. Its OpenRouter page shows daily, weekly, monthly, and lifetime spend, the active limit and remaining amount when present, keeps the last successful snapshot after a refresh failure, and links to OpenRouter Activity, API Keys, and Credits. The Host resolves the credential and returns only normalized counters; the browser never receives the key. OpenRouter copy is registered for English, Chinese, and Russian.
 
 ### Editing a provider
 

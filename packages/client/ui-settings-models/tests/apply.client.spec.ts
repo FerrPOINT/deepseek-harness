@@ -70,6 +70,19 @@ function declare(slots: SlotRegistry): () => void {
 }
 
 describe('ui-settings-models apply', () => {
+  it('labels OpenRouter limits in the shipped Russian locale', async () => {
+    const { ctx, slots, locale } = await bench()
+    onTestFinished(() => ctx.fiber.dispose())
+    declare(slots)
+    locale.addLanguage({ id: 'ru', label: 'Русский', fallback: 'en' })
+    locale.setLocale('ru')
+    await ctx.plugin({ inject: [...inject], apply }).await()
+    const section = slots.entries('settings.section').find(entry => entry.options.id === 'limits')
+    expect(section).toBeDefined()
+    expect(resolveSlotLabel(section!.options.label)).toBe('Лимиты')
+    expect(locale.bind('settings.openrouter')('weeklyUsage')).toBe('Потрачено за неделю')
+  })
+
   it('keeps manual credential onboarding available when the native shell owns automatic onboarding', async () => {
     const { ctx, slots } = await bench()
     declare(slots)

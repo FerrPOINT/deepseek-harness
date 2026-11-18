@@ -9,7 +9,7 @@ description: "FerrPOINT profile 使用内置 ru 语言，替代部分翻译的 r
 
 ## 变更
 
-FerrPOINT Web profile 选择上游的 `ru` 语言。部分翻译的 `ru-pro` 语言包已移除；其实例管理翻译归属于侧边栏的 `ru` 字典。明确选择 `ru-pro` 的现有 profile 必须更新语言偏好。
+FerrPOINT Web profile 选择上游的 `ru` 语言。部分翻译的 `ru-pro` 语言包已移除；其实例管理和 OpenRouter 翻译归属于各自插件的 `ru` 字典。明确选择 `ru-pro` 的现有 profile 必须更新语言偏好。
 
 ## 迁移
 

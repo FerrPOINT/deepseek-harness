@@ -49,7 +49,7 @@ API 密钥输入框通过 `autocomplete="new-password"` 请求浏览器不要自
 
 ### OpenRouter 用量
 
-Settings 最底部的**限额**入口在打开时通过 `llm/providerUsage` 读取精确的 `openrouter` 路由，并在挂载期间每分钟刷新。其 OpenRouter 页面显示日、周、月与累计消费，在存在时显示生效限额与剩余额度；刷新失败后保留最后一次成功快照，并链接 OpenRouter Activity、API Keys 与 Credits。Host 解析凭据且仅返回归一化计数；浏览器绝不会收到密钥。
+Settings 最底部的**限额**入口在打开时通过 `llm/providerUsage` 读取精确的 `openrouter` 路由，并在挂载期间每分钟刷新。其 OpenRouter 页面显示日、周、月与累计消费，在存在时显示生效限额与剩余额度；刷新失败后保留最后一次成功快照，并链接 OpenRouter Activity、API Keys 与 Credits。Host 解析凭据且仅返回归一化计数；浏览器绝不会收到密钥。OpenRouter 文案注册了英语、中文和俄语。
 
 ### 编辑提供商
 

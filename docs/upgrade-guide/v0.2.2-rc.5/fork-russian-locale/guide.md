@@ -9,7 +9,7 @@ English | [中文](guide.zh.md)
 
 ## Change
 
-The FerrPOINT Web profile selects the upstream `ru` locale. The partial `ru-pro` language pack is removed; its instance-management translations belong to the sidebar's `ru` dictionary. Existing profiles that explicitly select `ru-pro` must update their preference.
+The FerrPOINT Web profile selects the upstream `ru` locale. The partial `ru-pro` language pack is removed; its instance-management and OpenRouter translations belong to their owning plugins' `ru` dictionaries. Existing profiles that explicitly select `ru-pro` must update their preference.
 
 ## Migration
 

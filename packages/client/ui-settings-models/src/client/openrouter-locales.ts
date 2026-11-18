@@ -22,3 +22,16 @@ export const openRouterZh: { [Key in OpenRouterKey]: string } = {
   today: '今日', week: '本周', month: '本月', allTime: '累计', updated: '更新于 {time}',
   activity: '活动', keys: 'API Key', credits: '余额',
 }
+
+/** Russian strings for the OpenRouter usage settings section. */
+export const openRouterRu: Record<OpenRouterKey, string> = {
+  nav: 'Лимиты', title: 'OpenRouter', intro: 'Текущие траты и лимиты настроенного API-ключа.',
+  loading: 'Загружаю данные OpenRouter…', loadFailed: 'Не удалось загрузить данные OpenRouter.',
+  unsupported: 'Настроенный маршрут OpenRouter не предоставляет данные о расходах.',
+  refresh: 'Обновить', refreshing: 'Обновляю…', retry: 'Повторить',
+  refreshFailed: 'Обновление не удалось. Показаны последние успешно загруженные данные.',
+  dailyUsage: 'Потрачено сегодня', weeklyUsage: 'Потрачено за неделю', monthlyUsage: 'Потрачено за месяц',
+  remaining: 'Осталось', noLimit: 'Лимит расходов не задан', ofLimit: 'из {limit}',
+  limitUsed: 'Использовано лимита', today: 'Сегодня', week: 'За неделю', month: 'За месяц',
+  allTime: 'За всё время', updated: 'Обновлено в {time}', activity: 'История', keys: 'API-ключи', credits: 'Баланс',
+}

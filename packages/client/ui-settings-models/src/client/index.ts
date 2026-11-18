@@ -31,7 +31,7 @@ import { WELCOME_NOTICE_SETTINGS_NAMESPACE } from '../onboarding-copy.ts'
 import { Config, ONBOARDING_CONFIG_GLOBAL } from '../onboarding-config.ts'
 import { OpenRouterSection } from './OpenRouterSection.tsx'
 import type { OpenRouterSectionInjected } from './OpenRouterSection.tsx'
-import { openRouterEn, openRouterZh, type OpenRouterKey } from './openrouter-locales.ts'
+import { openRouterEn, openRouterRu, openRouterZh, type OpenRouterKey } from './openrouter-locales.ts'
 
 export type { ModelsSectionInjected, ModelsSectionProps } from './ModelsSection.tsx'
 export type { ModelsFooterOwnerProps, ProviderCardExtrasOwnerProps } from './slot-contract.ts'
@@ -87,7 +87,7 @@ export function apply(ctx: ClientContext): void {
   const configured = Config(payload === undefined ? {} : payload)
   const credentialOnboarding = configured.credentialOnboarding && !('dshDesktop' in globalThis)
   ctx.effect(() => ctx.locale.register(NS, { zh, en, ja, es, fr, de, ru, pt }), 'ui-settings-models: copy dictionaries')
-  ctx.effect(() => ctx.locale.register('settings.openrouter', { zh: openRouterZh, en: openRouterEn }),
+  ctx.effect(() => ctx.locale.register('settings.openrouter', { zh: openRouterZh, en: openRouterEn, ru: openRouterRu }),
     'ui-settings-models: OpenRouter dictionaries')
 
   const schema = createSettingsSchemaOperations(ctx.settingsSchema)
