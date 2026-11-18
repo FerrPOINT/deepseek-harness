@@ -73,7 +73,7 @@ function mountShell({ collapsed = false, width = 300, drawer = false, shortcuts 
   const brandName = <span data-testid="custom-brand-name">Custom Brand</span>
   let current = { collapsed, width, drawer }
   const root = () => (
-    <SidebarRoot
+    <SidebarRoot useStore={useInstanceStore} openInstance={() => {}}
       drawer={current.drawer}
       collapsed={current.collapsed} width={current.width}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
@@ -84,8 +84,6 @@ function mountShell({ collapsed = false, width = 300, drawer = false, shortcuts 
       {...allowAllAccess}
       startSession={startSession} toggleSidebar={toggleSidebar} trackEntryClick={trackEntryClick} t={t}
       renderFactorySlot={() => null}
-      useStore={useInstanceStore}
-      openInstance={() => {}}
       renderSlot={((
         key: string,
         owner: SidebarFooterActionOwnerProps | SidebarSectionOwnerProps | SidebarSessionActionOwnerProps | SidebarSettingsOwnerProps,
@@ -201,8 +199,7 @@ describe('SidebarRoot shell', () => {
     fireEvent.focus(button)
     expect(Array.from(screen.getByRole('tooltip').querySelectorAll('kbd'), key => key.textContent)).toEqual(['Ctrl', 'N'])
   })
-  it('routes New Session (capsule + wordmark) and the column toggle', () => {
-    // Occupied brand slots keep New Session even when the build carries a version.
+  it('routes New Session and the column toggle', () => {
     vi.stubEnv('DSH_CLIENT_VERSION', '1.2.3')
     const b = mountShell()
     expect(screen.getByTestId('custom-brand-mark')).toBeTruthy()
@@ -214,7 +211,7 @@ describe('SidebarRoot shell', () => {
     expect(b.startSession).toHaveBeenCalledOnce()
     fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
     expect(b.toggleSidebar).toHaveBeenCalledOnce()
-    expect(b.trackEntryClick).toHaveBeenCalledTimes(2)
+    expect(b.trackEntryClick).toHaveBeenCalledOnce()
   })
 
   it('reports the collapsed rail New Session as a sidebar click outside the Windows caption', () => {
@@ -228,7 +225,7 @@ describe('SidebarRoot shell', () => {
     const toggleSidebar = vi.fn()
     const startSession = vi.fn()
     const useRemoteAccess = vi.fn((action: string) => action !== 'session/create')
-    render(<SidebarRoot
+    render(<SidebarRoot useStore={useInstanceStore} openInstance={() => {}}
       collapsed={false} width={300} drawer={false}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
@@ -250,7 +247,7 @@ describe('SidebarRoot shell', () => {
     expect(useRemoteAccess).toHaveBeenCalledWith('session/create')
     expect(screen.queryByRole('button', { name: 'New session' })).toBeNull()
     expect(screen.getByTestId('brand-mark')).toBeTruthy()
-    expect(screen.getByTestId('brand-name')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Switch DSH instance: Local DSH' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
     expect(toggleSidebar).toHaveBeenCalledOnce()
     expect(startSession).not.toHaveBeenCalled()
@@ -260,7 +257,7 @@ describe('SidebarRoot shell', () => {
     vi.stubEnv('DSH_CLIENT_COMMIT_HASH', '0123456')
     vi.stubEnv('DSH_CLIENT_GIT_DIRTY', 'true')
     vi.stubEnv('DSH_CLIENT_VERSION', '1.2.3-rc.4')
-    const { container } = render(<SidebarRoot
+    const { container } = render(<SidebarRoot useStore={useInstanceStore} openInstance={() => {}}
       drawer={false}
       collapsed={false} width={300}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
@@ -271,8 +268,6 @@ describe('SidebarRoot shell', () => {
       {...allowAllAccess}
       startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
       renderFactorySlot={() => null}
-      useStore={useInstanceStore}
-      openInstance={() => {}}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
@@ -287,7 +282,7 @@ describe('SidebarRoot shell', () => {
     [{ DSH_CLIENT_COMMIT_HASH: 'abcdef0', DSH_CLIENT_VERSION: '1.2.3' }, '1.2.3-abcdef0'],
   ])('omits unavailable build-version suffixes from %j', (environment, expected) => {
     for (const [name, value] of Object.entries(environment)) vi.stubEnv(name, value)
-    render(<SidebarRoot
+    render(<SidebarRoot useStore={useInstanceStore} openInstance={() => {}}
       drawer={false}
       collapsed={false} width={300}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
@@ -298,8 +293,6 @@ describe('SidebarRoot shell', () => {
       {...allowAllAccess}
       startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
       renderFactorySlot={() => null}
-      useStore={useInstanceStore}
-      openInstance={() => {}}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
@@ -308,7 +301,7 @@ describe('SidebarRoot shell', () => {
     expect(screen.getByText(expected)).toBeTruthy()
   })
 
-  it.each([false, true])('copies the local-build version from the fallback mark and name (darwin=%s)', async (darwin) => {
+  it.each([false, true])('copies the build version from the fallback mark without opening the instance menu (darwin=%s)', async (darwin) => {
     if (darwin) document.documentElement.dataset.platform = 'darwin'
     vi.stubEnv('DSH_CLIENT_COMMIT_HASH', 'abcdef0')
     vi.stubEnv('DSH_CLIENT_VERSION', '1.2.3')
@@ -319,7 +312,7 @@ describe('SidebarRoot shell', () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     const startSession = vi.fn()
     const trackEntryClick = vi.fn<SidebarRootComponentProps['trackEntryClick']>()
-    render(<SidebarRoot
+    render(<SidebarRoot useStore={useInstanceStore} openInstance={() => {}}
       collapsed={false} width={300} drawer={false}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
@@ -333,44 +326,23 @@ describe('SidebarRoot shell', () => {
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
     vi.useFakeTimers()
-
-    const copiedToasts = () => screen.queryAllByRole('alert').map(toast => toast.textContent)
-    await act(async () => { fireEvent.click(screen.getByText('DSH Local Build')) })
-    expect(writeText).toHaveBeenLastCalledWith('1.2.3-abcdef0')
-    expect(copiedToasts()).toEqual(['Version copied'])
-    // The brand itself keeps its title and version.
-    expect(screen.getByText('DSH Local Build')).toBeTruthy()
-    expect(screen.getByText('1.2.3-abcdef0')).toBeTruthy()
-    act(() => { vi.advanceTimersByTime(4000) })
-    expect(copiedToasts()).toEqual([])
-
-    // A refused write claims no success.
-    await act(async () => { fireEvent.click(screen.getByText('1.2.3-abcdef0')) })
-    expect(copiedToasts()).toEqual([])
-
-    // The fallback mark copies too, and its click still reaches document.
-    const documentClick = vi.fn()
-    document.addEventListener('click', documentClick)
-    const mark = screen.getByText('DSH Local Build').closest('[aria-hidden]')!.querySelector('svg')!
+    const mark = document.querySelector('[data-copy-version]')!
     await act(async () => { fireEvent.click(mark) })
-    document.removeEventListener('click', documentClick)
-    expect(documentClick).toHaveBeenCalledOnce()
+    expect(writeText).toHaveBeenLastCalledWith('1.2.3-abcdef0')
+    expect(screen.getByRole('alert').textContent).toBe('Version copied')
+    act(() => { vi.advanceTimersByTime(4000) })
+    await act(async () => { fireEvent.click(mark) })
+    expect(screen.queryByRole('alert')).toBeNull()
+    await act(async () => { fireEvent.click(mark) })
     expect(writeText).toHaveBeenCalledTimes(3)
-    expect(copiedToasts()).toEqual(['Version copied'])
+    expect(screen.getByRole('alert').textContent).toBe('Version copied')
+    expect(screen.getByRole('button', { name: 'Switch DSH instance: Local DSH' }).getAttribute('aria-expanded')).toBe('false')
     expect(startSession).not.toHaveBeenCalled()
-    // Copying the version is not a New Session click.
     expect(trackEntryClick).not.toHaveBeenCalled()
-
-    // The rest of the brand button still starts and reports a session.
-    if (!darwin) {
-      fireEvent.click(screen.getAllByRole('button', { name: 'New session' })[0]!)
-      expect(startSession).toHaveBeenCalledOnce()
-      expect(trackEntryClick).toHaveBeenCalledExactlyOnceWith({ menu_name: 'new_session', position: 'sidebar' })
-    }
   })
 
   it('retains the local-build fallback without complete build metadata', () => {
-    render(<SidebarRoot
+    render(<SidebarRoot useStore={useInstanceStore} openInstance={() => {}}
       drawer={false}
       collapsed={false} width={300}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
@@ -381,8 +353,6 @@ describe('SidebarRoot shell', () => {
       {...allowAllAccess}
       startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
       renderFactorySlot={() => null}
-      useStore={useInstanceStore}
-      openInstance={() => {}}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
@@ -444,7 +414,7 @@ describe('SidebarRoot shell', () => {
 
   it('shows only the badge bubble while the rail badge is hovered inside the toggle', () => {
     vi.useFakeTimers()
-    render(<SidebarRoot
+    render(<SidebarRoot useStore={useInstanceStore} openInstance={() => {}}
       drawer={false}
       collapsed width={56}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
@@ -455,8 +425,6 @@ describe('SidebarRoot shell', () => {
       {...allowAllAccess}
       startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
       renderFactorySlot={() => null}
-      useStore={useInstanceStore}
-      openInstance={() => {}}
       renderSlot={((key: string) => key === 'sidebar.toggle.badge'
         ? <Tooltip label="Update — V1.2.3"><span data-testid="badge" /></Tooltip>
         : null) as SidebarRootComponentProps['renderSlot']}
@@ -536,15 +504,14 @@ describe('Windows caption New Session analytics', () => {
     expect(b.trackEntryClick).toHaveBeenCalledExactlyOnceWith({ menu_name: 'new_session', position: 'titlebar' })
   })
 
-  it('reports the expanded brand and New Session button as sidebar clicks', () => {
+  it('reports the expanded New Session button as a sidebar click', () => {
     document.documentElement.setAttribute('data-windows-titlebar', '')
     const b = mountShell()
     const starters = screen.getAllByRole('button', { name: 'New session' })
-    expect(starters).toHaveLength(2)
+    expect(starters).toHaveLength(1)
     for (const button of starters) fireEvent.click(button)
-    expect(b.startSession).toHaveBeenCalledTimes(2)
+    expect(b.startSession).toHaveBeenCalledOnce()
     expect(b.trackEntryClick.mock.calls).toEqual([
-      [{ menu_name: 'new_session', position: 'sidebar' }],
       [{ menu_name: 'new_session', position: 'sidebar' }],
     ])
   })

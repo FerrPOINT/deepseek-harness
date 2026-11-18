@@ -48,7 +48,7 @@ dsh --profile web --no-open --port 8080
 
 默认权限预设为 `danger-full-access`：命令在无沙箱且不请求确认的情况下运行，权限范围不超过运行 DSH 的操作系统账户。仅在可信机器和工作区使用；该预设不会授予操作系统管理员权限。
 
-Web profile 还会安装并挂载 Codex 委派和只读 TypeScript/JavaScript 导航。Codex 使用目标机器上已有的原生认证，并绕过 Codex 自身的确认与沙箱；子进程权限仍受操作系统账户限制。TypeScript language server 安装在 profile 内，启动路径也根据该 profile 解析。Playwright MCP provider 仍是可选的实验性功能。
+Web profile 还会安装并挂载 Codex 委派和只读 TypeScript/JavaScript 导航。Codex 使用目标机器上已有的原生认证，并绕过 Codex 自身的确认与沙箱；子进程权限仍受操作系统账户限制。TypeScript language server 是安装依赖，启动路径从 Web bundle 解析。Playwright MCP provider 仍是可选的实验性功能。
 
 ### 配置
 

@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for guide.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.2-rc.5/fork-russian-locale/guide.md
+/:
+  en: 1ccf694eb5183f97
+  zh: 46cdbd9d13f0a4dd
+/ferrpoint-russian-locale:
+  en: 5c0d7aba08e5fc53
+  zh: 4c7dd016c0b8b371
+/ferrpoint-russian-locale/change:
+  en: 546469340f0ff24f
+  zh: ead124abd9869567
+/ferrpoint-russian-locale/migration:
+  en: 37c7d16f3dba0850
+  zh: 395a12f9b8a78b3a

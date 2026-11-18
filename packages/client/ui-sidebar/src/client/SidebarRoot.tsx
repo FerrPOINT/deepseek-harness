@@ -269,9 +269,6 @@ export function SidebarRoot({
   }, [pointerInside])
 
   const buildVersion = localBuildVersion()
-  // The local-build fallbacks copy the badge text; the brand button below
-  // skips New Session for clicks inside them. The click still bubbles, so
-  // document-level outside-click listeners see it.
   // Each successful copy bumps the key so a repeated copy replays the toast.
   const [copiedToast, setCopiedToast] = useState<number | null>(null)
   const copyVersion = (version: string) => (): void => {

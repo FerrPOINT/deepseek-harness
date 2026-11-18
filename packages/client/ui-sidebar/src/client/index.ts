@@ -20,7 +20,7 @@ import { en, ja, es, fr, de, ru, pt, zh, type SidebarKey } from './locales.ts'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import { InstanceSettingsSection } from './InstanceSettingsSection.tsx'
 import { createInstanceRegistryStore } from './instance-registry-store.ts'
-import { clearLegacyInstanceTransfer, readInitialInstanceRegistry, writeInstanceRegistry } from './instance-registry.ts'
+import { readInitialInstanceRegistry, writeInstanceRegistry } from './instance-registry.ts'
 import type { DshInstance } from './instance-registry.ts'
 
 export type {
@@ -66,7 +66,6 @@ export function apply(ctx: ClientContext): void {
   const initialRegistry = readInitialInstanceRegistry(window.location.href, storage, t('instance.local'))
   const registryStore = createInstanceRegistryStore(initialRegistry.instances)
   writeInstanceRegistry(storage, initialRegistry.instances)
-  clearLegacyInstanceTransfer(window.history, window.location.href)
   const writeInstances = (instances: readonly DshInstance[]): boolean => writeInstanceRegistry(storage, instances)
   const openInstance = (url: string): void => { window.location.assign(url) }
   const panels = createSnapshotStore<readonly SidebarPanelMetadata[]>([])

@@ -691,7 +691,7 @@
         servers:
           typescript:
             command: !!js process.execPath
-            args: !!js "[ctx.get('profileContext').dir + '/node_modules/typescript-language-server/lib/cli.mjs', '--stdio']"
+            args: !!js "[process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('typescript-language-server/lib/cli.mjs'), '--stdio']"
             extensionToLanguage:
               .ts: typescript
               .mts: typescript

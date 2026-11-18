@@ -11,7 +11,7 @@ import css from './HeaderLeadingControls.module.css'
 /** Full props of the shell.leading occupant. */
 export type HeaderLeadingControlsProps =
   PropsRuntime<'shell.leading'>
-  & Pick<InjectFace<SidebarRootInjected>, 'toggleSidebar' | 'startSession' | 'useShortcuts'>
+  & Omit<InjectFace<SidebarRootInjected>, 'openInstance'>
   & PropsLocale<'sidebar'>
 
 /**

@@ -122,6 +122,7 @@ exports[`sidebar shell snapshots > renders Windows caption controls in expanded 
     >
       <span
         class="root menuAnchor"
+        style="anchor-name: --dsh-menu-trigger-rk;"
       >
         <button
           aria-expanded="false"
@@ -159,33 +160,21 @@ exports[`sidebar shell snapshots > renders Windows caption controls in expanded 
             <span
               class="name"
             >
-              <span
-                class="localBuildBrand copyVersion"
-                data-copy-version="true"
-              >
-                <span
-                  class="localBuildTitle"
-                >
-                  DSH Local Build
-                </span>
-                <span
-                  class="buildVersion"
-                >
-                  1.2.3-rc.4-abc1234-dirty
-                </span>
-              </span>
-            </div>
+              Local DSH
+            </span>
+            <span
+              class="version"
+            >
+              1.2.3-rc.4-abc1234-dirty
+            </span>
           </span>
           <svg
             aria-hidden="true"
             class="chevron"
-            data-content="2b5d7fd1"
-            fill="none"
+            data-content="2a7eaef6"
+            data-icon="dsw-icon-chevron-down-outline-regular"
             height="14"
-            stroke-width="1"
-            viewBox="0 0 16 16"
             width="14"
-            xmlns="http://www.w3.org/2000/svg"
           />
         </button>
       </span>
@@ -300,6 +289,7 @@ exports[`sidebar shell snapshots > renders the collapsed rail after the crossfad
     >
       <span
         class="root menuAnchor"
+        style="anchor-name: --dsh-menu-trigger-rc;"
       >
         <button
           aria-expanded="false"
@@ -316,14 +306,19 @@ exports[`sidebar shell snapshots > renders the collapsed rail after the crossfad
               data-slot="sidebar.brand.mark"
               style="display: contents;"
             >
-              <svg
-                aria-hidden="true"
-                data-content="965fe321"
-                fill="none"
-                height="17.6580310880829"
-                viewBox="0 0 23.16 17.04"
-                width="24"
-              />
+              <span
+                class="copyVersion"
+                data-copy-version="true"
+              >
+                <svg
+                  aria-hidden="true"
+                  data-content="965fe321"
+                  fill="none"
+                  height="17.6580310880829"
+                  viewBox="0 0 23.16 17.04"
+                  width="24"
+                />
+              </span>
             </div>
           </span>
           <span
@@ -343,13 +338,10 @@ exports[`sidebar shell snapshots > renders the collapsed rail after the crossfad
           <svg
             aria-hidden="true"
             class="chevron"
-            data-content="2b5d7fd1"
-            fill="none"
+            data-content="2a7eaef6"
+            data-icon="dsw-icon-chevron-down-outline-regular"
             height="14"
-            stroke-width="1"
-            viewBox="0 0 16 16"
             width="14"
-            xmlns="http://www.w3.org/2000/svg"
           />
         </button>
       </span>
@@ -364,8 +356,8 @@ exports[`sidebar shell snapshots > renders the collapsed rail after the crossfad
           class="panelIcon"
           data-content="d95b7908"
           data-icon="dsw-icon-panel-left-outline-regular"
-          height="18"
-          width="18"
+          height="16"
+          width="16"
         />
       </button>
     </div>
@@ -389,11 +381,16 @@ exports[`sidebar shell snapshots > renders the collapsed rail after the crossfad
             >
               <svg
                 aria-hidden="true"
-                data-content="6e5e38f3"
-                data-icon="dsw-icon-new-chat-outline-regular"
-                height="18"
-                width="18"
+                data-content="532cf99a"
+                data-icon="dsw-icon-new-chat-outline-medium"
+                height="14"
+                width="14"
               />
+              <span
+                class="newSessionLabel wide"
+              >
+                New Session
+              </span>
             </span>
           </span>
         </button>
@@ -404,6 +401,7 @@ exports[`sidebar shell snapshots > renders the collapsed rail after the crossfad
     >
       <div
         class="scrollArea"
+        data-sidebar-scrollport=""
       >
         <div
           class="regionArea"
@@ -458,6 +456,7 @@ exports[`sidebar shell snapshots > renders the expanded column (instance selecto
     >
       <span
         class="root menuAnchor"
+        style="anchor-name: --dsh-menu-trigger-r4;"
       >
         <button
           aria-expanded="false"
@@ -495,33 +494,21 @@ exports[`sidebar shell snapshots > renders the expanded column (instance selecto
             <span
               class="name"
             >
-              <span
-                class="localBuildBrand copyVersion"
-                data-copy-version="true"
-              >
-                <span
-                  class="localBuildTitle"
-                >
-                  DSH Local Build
-                </span>
-                <span
-                  class="buildVersion"
-                >
-                  1.2.3-rc.4-abc1234-dirty
-                </span>
-              </span>
-            </div>
+              Local DSH
+            </span>
+            <span
+              class="version"
+            >
+              1.2.3-rc.4-abc1234-dirty
+            </span>
           </span>
           <svg
             aria-hidden="true"
             class="chevron"
-            data-content="2b5d7fd1"
-            fill="none"
+            data-content="2a7eaef6"
+            data-icon="dsw-icon-chevron-down-outline-regular"
             height="14"
-            stroke-width="1"
-            viewBox="0 0 16 16"
             width="14"
-            xmlns="http://www.w3.org/2000/svg"
           />
         </button>
       </span>
@@ -636,6 +623,7 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
     >
       <span
         class="root menuAnchor"
+        style="anchor-name: --dsh-menu-trigger-r0;"
       >
         <button
           aria-expanded="false"
@@ -673,33 +661,21 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
             <span
               class="name"
             >
-              <span
-                class="localBuildBrand copyVersion"
-                data-copy-version="true"
-              >
-                <span
-                  class="localBuildTitle"
-                >
-                  DSH 本地构建
-                </span>
-                <span
-                  class="buildVersion"
-                >
-                  1.2.3-rc.4-abc1234-dirty
-                </span>
-              </span>
-            </div>
+              本地 DSH
+            </span>
+            <span
+              class="version"
+            >
+              1.2.3-rc.4-abc1234-dirty
+            </span>
           </span>
           <svg
             aria-hidden="true"
             class="chevron"
-            data-content="2b5d7fd1"
-            fill="none"
+            data-content="2a7eaef6"
+            data-icon="dsw-icon-chevron-down-outline-regular"
             height="14"
-            stroke-width="1"
-            viewBox="0 0 16 16"
             width="14"
-            xmlns="http://www.w3.org/2000/svg"
           />
         </button>
       </span>

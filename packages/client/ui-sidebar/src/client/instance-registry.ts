@@ -1,5 +1,4 @@
 const STORAGE_KEY = 'dsh.client.instances.v1'
-const TRANSFER_KEY = 'dsh-switcher'
 const MAX_INSTANCES = 32
 
 /** Localized failure key returned when a DSH instance address is rejected. */
@@ -136,17 +135,4 @@ export function writeInstanceRegistry(storage: Pick<Storage, 'setItem'> | null, 
   } catch {
     return false
   }
-}
-
-/** Remove an obsolete roster fragment without importing its contents.
- * @param history Current browser history object.
- * @param href Current page URL.
- */
-export function clearLegacyInstanceTransfer(history: Pick<History, 'replaceState' | 'state'>, href: string): void {
-  const url = new URL(href)
-  const fragment = new URLSearchParams(url.hash.slice(1))
-  if (!fragment.has(TRANSFER_KEY)) return
-  fragment.delete(TRANSFER_KEY)
-  url.hash = fragment.toString()
-  history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`)
 }

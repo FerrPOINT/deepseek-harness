@@ -189,6 +189,22 @@ export const ru = {
   'navigation.label': 'Навигация',
   'panels.more': 'Ещё',
   'version.copied': 'Версия скопирована',
+  'instance.section': 'Инстансы DSH',
+  'instance.manage.title': 'Инстансы DSH',
+  'instance.manage.description': 'Добавляйте адреса серверов и переключайтесь между инстансами DSH.',
+  'instance.current': 'текущий',
+  'instance.edit': 'Изменить',
+  'instance.edit.title': 'Изменить инстанс DSH',
+  'instance.delete': 'Удалить',
+  'instance.delete.confirm': 'Подтвердить',
+  'instance.add.title': 'Добавить инстанс DSH',
+  'instance.add.submit': 'Добавить',
+  'instance.save': 'Сохранить',
+  'instance.error.duplicate': 'Этот адрес DSH уже есть в списке.',
+  'instance.status.check': 'Проверить',
+  'instance.status.checking': 'Проверяем…',
+  'instance.status.available': 'Сервер отвечает',
+  'instance.status.unavailable': 'Не удалось проверить сервер',
 } satisfies Record<keyof typeof en, string>
 
 /** Portuguese dictionary, checked against the English keys. */

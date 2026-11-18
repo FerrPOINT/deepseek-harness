@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
-  clearLegacyInstanceTransfer, parseInstanceInput, readInitialInstanceRegistry, writeInstanceRegistry,
+  parseInstanceInput, readInitialInstanceRegistry, writeInstanceRegistry,
 } from '../src/client/instance-registry.ts'
 
 describe('DSH instance input', () => {
@@ -96,15 +96,6 @@ describe('DSH instance registry persistence', () => {
       .toEqual([{ name: 'current.example.com', url: 'https://current.example.com' }])
   })
 
-  it('does not import a roster from an obsolete switcher fragment', () => {
-    const result = readInitialInstanceRegistry(
-      'https://current.example.com/#dsh-switcher=eyJuYW1lIjoiRXh0ZXJuYWwiLCJ1cmwiOiJodHRwczovL2V4YW1wbGUuY29tIn0',
-      null,
-      'Local',
-    )
-    expect(result).toEqual({ instances: [{ name: 'current.example.com', url: 'https://current.example.com' }] })
-  })
-
   it('writes browser storage and reports storage failures', () => {
     const instances = [{ name: 'DSH', url: 'https://dsh.example.com' }]
     const setItem = vi.fn()
@@ -112,17 +103,5 @@ describe('DSH instance registry persistence', () => {
     expect(setItem).toHaveBeenCalledWith('dsh.client.instances.v1', JSON.stringify(instances))
     expect(writeInstanceRegistry(null, instances)).toBe(true)
     expect(writeInstanceRegistry({ setItem: () => { throw new Error('storage full') } }, instances)).toBe(false)
-  })
-
-  it('clears an obsolete switcher fragment without importing it', () => {
-    const history = { state: { key: 'state' }, replaceState: vi.fn() }
-    clearLegacyInstanceTransfer(history, 'https://dsh.example.com/?token=t#dsh-switcher=old-data&tab=settings')
-    expect(history.replaceState).toHaveBeenCalledWith(history.state, '', '/?token=t#tab=settings')
-  })
-
-  it('leaves an ordinary fragment unchanged when no legacy registry is present', () => {
-    const history = { state: null, replaceState: vi.fn() }
-    clearLegacyInstanceTransfer(history, 'https://dsh.example.com/?token=t#anchor')
-    expect(history.replaceState).not.toHaveBeenCalled()
   })
 })

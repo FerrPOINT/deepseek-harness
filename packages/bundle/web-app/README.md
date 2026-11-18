@@ -48,7 +48,7 @@ Saved model selections override the composition default. The settings card accep
 
 The default permission preset is `danger-full-access`: commands run without a sandbox and without approval prompts, within the rights of the operating-system account running DSH. Use this only on a trusted machine and workspace; it does not grant operating-system administrator rights.
 
-The Web profile also installs and mounts Codex delegation and read-only TypeScript/JavaScript navigation. Codex uses native authentication configured on the target machine and bypasses Codex approvals and sandbox; its child process remains limited to the operating-system account. The TypeScript language server installs within the profile and its path is resolved from that profile. The Playwright MCP provider remains an experimental opt-in.
+The Web profile also installs and mounts Codex delegation and read-only TypeScript/JavaScript navigation. Codex uses native authentication configured on the target machine and bypasses Codex approvals and sandbox; its child process remains limited to the operating-system account. The TypeScript language server is an installation dependency resolved from the Web bundle. The Playwright MCP provider remains an experimental opt-in.
 
 ### Configuration
 
