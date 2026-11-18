@@ -279,7 +279,7 @@ function requestHeaders(
 function usageNumber(data: Record<string, unknown>, field: string): number {
   const value = data[field]
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-    throw new LlmError(`OpenRouter usage response has an invalid ${field}`, 'PROVIDER_ERROR')
+    throw new LlmError(`OpenRouter usage response has an invalid ${field}`, 'INVALID_RESPONSE')
   }
   return value
 }
@@ -294,24 +294,24 @@ function optionalUsageNumber(data: Record<string, unknown>, field: string): numb
 /** Validate and detach the provider response without retaining credential-adjacent fields. */
 function openRouterUsage(provider: string, payload: unknown): LlmProviderUsage {
   if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
-    throw new LlmError('OpenRouter usage response is not an object', 'PROVIDER_ERROR')
+    throw new LlmError('OpenRouter usage response is not an object', 'INVALID_RESPONSE')
   }
   const root = payload as Record<string, unknown>
   const candidate = root.data
   if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
-    throw new LlmError('OpenRouter usage response has no data object', 'PROVIDER_ERROR')
+    throw new LlmError('OpenRouter usage response has no data object', 'INVALID_RESPONSE')
   }
   const data = candidate as Record<string, unknown>
   const reset = data.limit_reset
   if (reset !== null && reset !== undefined && reset !== 'daily' && reset !== 'weekly' && reset !== 'monthly') {
-    throw new LlmError('OpenRouter usage response has an invalid limit_reset', 'PROVIDER_ERROR')
+    throw new LlmError('OpenRouter usage response has an invalid limit_reset', 'INVALID_RESPONSE')
   }
   const expiresAt = data.expires_at
   if (expiresAt !== null && expiresAt !== undefined && typeof expiresAt !== 'string') {
-    throw new LlmError('OpenRouter usage response has an invalid expires_at', 'PROVIDER_ERROR')
+    throw new LlmError('OpenRouter usage response has an invalid expires_at', 'INVALID_RESPONSE')
   }
   if (typeof data.is_free_tier !== 'boolean') {
-    throw new LlmError('OpenRouter usage response has an invalid is_free_tier', 'PROVIDER_ERROR')
+    throw new LlmError('OpenRouter usage response has an invalid is_free_tier', 'INVALID_RESPONSE')
   }
   const limit = optionalUsageNumber(data, 'limit')
   const limitRemaining = optionalUsageNumber(data, 'limit_remaining')
@@ -420,7 +420,7 @@ export class PiAiAdapter extends LlmAdapter {
       ...signal === undefined ? {} : { signal },
     })
     if (!response.ok) {
-      throw new LlmError(`OpenRouter usage request failed with HTTP ${String(response.status)}`, 'PROVIDER_ERROR', {
+      throw new LlmError(`OpenRouter usage request failed with HTTP ${String(response.status)}`, `HTTP_${response.status}`, {
         status: response.status,
       })
     }

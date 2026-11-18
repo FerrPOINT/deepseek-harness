@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for guide.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.2-rc.5/fork-openrouter-usage-errors/guide.md
+/:
+  en: 7404eac796025e96
+  zh: 9a23185585183e90
+/openrouter-usage-errors:
+  en: d4df43d57c85a6eb
+  zh: 2a162071e8f94356
+/openrouter-usage-errors/change:
+  en: fba5a1983780f1a9
+  zh: efba9b7922564012
+/openrouter-usage-errors/migration:
+  en: 4a4f099226799011
+  zh: bfb12ef95576a9fd

@@ -135,10 +135,10 @@ describe('PiAiAdapter provider routing', () => {
   it('rejects malformed OpenRouter usage and non-success responses', async () => {
     const malformed = await mockServer([{ body: JSON.stringify({ data: { usage: 'wrong' } }) }])
     await expect(adapterOf({ openrouter: { baseURL: malformed.url } }).providerUsage('openrouter'))
-      .rejects.toMatchObject({ code: 'PROVIDER_ERROR' })
+      .rejects.toMatchObject({ name: 'LlmError', code: 'INVALID_RESPONSE' })
     const refused = await mockServer([{ status: 401 }])
     await expect(adapterOf({ openrouter: { baseURL: refused.url } }).providerUsage('openrouter'))
-      .rejects.toMatchObject({ code: 'PROVIDER_ERROR', failure: { status: 401 } })
+      .rejects.toMatchObject({ name: 'LlmError', code: 'HTTP_401', failure: { status: 401 } })
   })
 
   it('resolves a catalog model dynamically and uses a private endpoint', async () => {
