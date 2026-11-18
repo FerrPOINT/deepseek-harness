@@ -99,6 +99,8 @@ Shareable viewer methods come from installed plugins' live Remote methods, enume
 
 The Owner Gateway decides each call on the Session and Workspace it names and refuses a call whose target is missing or invalid. The viewer's Session list and workspace membership are trimmed to the source and the children that viewer owns. The page reads each Session's own answer from the reader's access snapshot, so a selection change never carries the previous Session's permission across. Unknown or unreadable modes fail closed. The Owner rechecks admission for source and child calls; revocation cancels the affected calls and streams, and a share whose admission narrows stops the shared Session's running turn. The page distinguishes authentication, access, expiry, stopped shares, offline owners, and transport failures, and retries only the failures classified as repeatable.
 
+Provider billing counters (`llm/providerUsage`) remain owner-only and are absent from viewer grants.
+
 -----
 
 <a id="understand-the-implementation"></a>

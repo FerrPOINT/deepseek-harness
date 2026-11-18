@@ -2,13 +2,14 @@
 import type { GlobalStandardProps } from '@deepseek-ai/dsh-client-ui-slots'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
+import { allowAllAccess, contextMenuHook, makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { InstanceSettingsSection } from '../src/client/InstanceSettingsSection.tsx'
 import type { InstanceSettingsSectionProps } from '../src/client/InstanceSettingsSection.tsx'
 import { en } from '../src/client/locales.ts'
 
 const t = makeTranslate(en) as InstanceSettingsSectionProps['t']
 const useResource = (() => ({ status: 'none' as const, value: undefined, failure: undefined, reload: () => {} })) as GlobalStandardProps['useResource']
+const unusedHook = (): never => { throw new Error('instance settings must not read unrelated global stores') }
 
 afterEach(() => {
   cleanup()
@@ -19,7 +20,7 @@ afterEach(() => {
 function mount(instances = [{ name: 'Current DSH', url: 'https://current.example.com' }], writeInstances = vi.fn(() => true)) {
   const setInstances = vi.fn()
   const openInstance = vi.fn()
-  const props = {
+  const props: InstanceSettingsSectionProps = {
     close: vi.fn(),
     useStore: <T,>(select: (state: { instances: typeof instances }) => T) => select({ instances }),
     actions: { setInstances },
@@ -27,7 +28,14 @@ function mount(instances = [{ name: 'Current DSH', url: 'https://current.example
     openInstance,
     t,
     useResource,
-  } as unknown as InstanceSettingsSectionProps
+    useContextMenu: contextMenuHook(),
+    useSessions: unusedHook,
+    useSessionStatus: unusedHook,
+    useSessionRetainInfo: unusedHook,
+    useWorkspaces: unusedHook,
+    usePanelInfo: unusedHook,
+    ...allowAllAccess,
+  }
   render(<InstanceSettingsSection {...props} />)
   return { setInstances, writeInstances, openInstance }
 }
