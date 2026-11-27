@@ -1,0 +1,52 @@
+services:
+  dsh:
+    image: ${DSH_IMAGE:?Set the verified DSH image}
+    user: ${DSH_UID_GID:?Set the deployment storage owner UID and GID}
+    init: true
+    read_only: true
+    restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      NARB_DISABLE_NATIVE_CACHE: '1'
+    env_file: ${DSH_PROVIDER_ENV_FILE:?Set the provider credential file}
+    volumes:
+      - type: bind
+        source: ${DSH_CONFIG_DIR:?Set the private configuration directory}
+        target: /etc/dsh
+        read_only: true
+      - type: bind
+        source: ${DSH_WORKSPACE_DIR:?Set the private working directory}
+        target: /workspace
+      - type: bind
+        source: ${DSH_DATA_DIR:?Set the private data directory}
+        target: /data
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=48m
+    pids_limit: 150
+    cpus: '1.5'
+    mem_limit: 640m
+    memswap_limit: 640m
+    stop_grace_period: 15s
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          const fs=require('node:fs');
+          const config=JSON.parse(fs.readFileSync('/etc/dsh/fleet.json','utf8'));
+          const token=fs.readFileSync(config.tokenFile,'utf8').trim();
+          fetch('http://127.0.0.1:'+config.port+'/health',{headers:{Authorization:'Bearer '+token},
+          signal:AbortSignal.timeout(2500)}).then(r=>{process.exitCode=r.ok?0:1}).catch(()=>{process.exitCode=1});
+      start_period: 30s
+      interval: 10s
+      timeout: 3s
+    networks:
+      fleet-agent:
+        aliases:
+          - ${DSH_NETWORK_ALIAS:?Set the DSH origin hostname}
+networks:
+  fleet-agent:
+    external: true
+    name: ${DSH_NETWORK:?Set the private network for this Fleet agent}

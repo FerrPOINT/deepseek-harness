@@ -42,7 +42,11 @@ function isQuestion(item: unknown): item is PublicQuestion {
       && typeof option.label === 'string' && (option.description === undefined || typeof option.description === 'string')))
 }
 
-export function fleetInteractionRecord(event: SessionEvent) {
+export type FleetInteractionRecord =
+  | { seq: number; type: 'interaction-requested'; interaction: FleetInteraction }
+  | ({ seq: number; type: 'interaction-closed' } & ClosedInteraction)
+
+export function fleetInteractionRecord(event: SessionEvent): FleetInteractionRecord | undefined {
   const record = pluginRecordOf(event)
   if (record?.type !== 'plugin:fleet/interaction-requested' && record?.type !== 'plugin:fleet/interaction-closed') return
   const data = record.data

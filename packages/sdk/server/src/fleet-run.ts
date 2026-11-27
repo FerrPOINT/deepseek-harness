@@ -5,7 +5,7 @@ import { brandString } from '@deepseek-ai/dsh-brand'
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
 import type { UserMessage } from '@deepseek-ai/dsh-llm'
 import { extractTextContent } from '@deepseek-ai/dsh-llm/message'
-import { fleetInteractionRecord, type FleetInteraction } from './fleet-interactions.ts'
+import { fleetInteractionRecord, type FleetInteraction, type FleetInteractionRecord } from './fleet-interactions.ts'
 
 const prefix = 'fleet-run-'
 
@@ -108,8 +108,7 @@ type FleetRunEvent =
   | { seq: number; type: 'accepted'; messageId: string }
   | { seq: number; type: 'started' }
   | { seq: number; type: 'output'; text: string }
-  | { seq: number; type: 'interaction-requested'; interaction: FleetInteraction }
-  | { seq: number; type: 'interaction-closed'; kind: FleetInteraction['kind']; requestId: string; answered: boolean }
+  | FleetInteractionRecord
   | { seq: number; type: 'ended'; status: TerminalStatus; reason: string }
 
 function terminalStatus(reason: string): TerminalStatus {
