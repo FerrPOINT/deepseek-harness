@@ -253,6 +253,11 @@ export class ReactLoopAgent implements Agent {
     this.loopCtx.agents.withInitiator(this, () => this.kick()).then(driver.resolve, driver.reject)
   }
 
+  /** Wake the driver for its existing inbox without appending another input. */
+  wakePendingInput(): void {
+    if (this.inbox.hasPending) this.wakeDriver()
+  }
+
   async whenIdle(): Promise<void> {
     let activity: Promise<void>
     do {

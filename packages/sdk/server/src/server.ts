@@ -14,11 +14,14 @@ import { SdkUserQuestionBridge } from './user-questions.ts'
 import { queryCommand } from './query-input.ts'
 import { queryCommandImages, queryContent } from './query-content.ts'
 import {
+  fleetRunAddress,
   fleetRunInputMatches,
   fleetRunParams,
   fleetRunPrompt,
   fleetRunReceipt,
   fleetRunSessionId,
+  fleetRunSnapshot,
+  fleetRunTerminal,
   requireOrdinarySession,
   type FleetRunParams,
 } from './fleet-run.ts'
@@ -155,7 +158,7 @@ export class HarnessSdkJsonRpcServer {
   private authFiber: { dispose(): Promise<void> } | undefined
   private readonly sessions = new Map<string, SessionRecord>()
   private readonly sessionCreations = new Map<string, Promise<SessionRecord>>()
-  private readonly fleetAdmissions = new Map<SessionId, Promise<unknown>>()
+  private readonly fleetOperations = new Map<SessionId, Promise<unknown>>()
   private readonly commandTasks = new Set<Promise<CommandExecution | undefined>>()
   private readonly queryInvocation = new AsyncLocalStorage<QueryActivity>()
   private readonly queryActivities = new Set<QueryActivity>()
@@ -625,6 +628,15 @@ export class HarnessSdkJsonRpcServer {
         return this.submitFleetRun(fleetRunParams(params))
       case 'fleet/run/lookup':
         return this.lookupFleetRun(fleetRunParams(params))
+      case 'fleet/run/get': {
+        const { sessionId, after } = fleetRunAddress(params, true)
+        return this.readFleetRun(sessionId, after)
+      }
+      case 'fleet/run/recover':
+      case 'fleet/run/stop': {
+        const { sessionId } = fleetRunAddress(params)
+        return this.withFleetRun(sessionId, () => this.controlFleetRun(sessionId, method === 'fleet/run/stop'))
+      }
       case 'initialize':
         return this.initialize(params as unknown as InitializeParams)
       case 'session/prompt':
@@ -689,35 +701,58 @@ export class HarnessSdkJsonRpcServer {
     return persistence
   }
 
-  private async storedFleetRunPrompt(sessionId: SessionId) {
+  private async storedFleetRunEvents(sessionId: SessionId) {
     const persistence = this.fleetPersistence()
-    if (await persistence.stat(sessionId) === undefined) return undefined
+    if (await persistence.stat(sessionId) === undefined) return []
     await using handle = await persistence.open(sessionId, 'read')
-    return fleetRunPrompt((await handle.read()).events)
+    return (await handle.read()).events
+  }
+
+  private async readFleetRun(sessionId: SessionId, after = -1) {
+    const current = this.sessions.get(sessionId)
+    if (current !== undefined) await this.flushFleetRun(current.handle.agent)
+    return fleetRunSnapshot(sessionId, await this.storedFleetRunEvents(sessionId), after)
+  }
+
+  private async controlFleetRun(sessionId: SessionId, stop: boolean) {
+    const saved = await this.readFleetRun(sessionId)
+    if (saved.kind !== 'run' || fleetRunTerminal(saved.status)) return saved
+
+    const existing = this.sessions.get(sessionId)
+    const record = existing ?? await this.openSession(sessionId, true, undefined, stop ? 'stop' : 'recover')
+    this.assertLiveAgent(record, sessionId)
+    const agent = record.handle.agent
+    if (stop) {
+      if (existing !== undefined) agent.cancel({ kind: 'user' })
+      await agent.whenIdle()
+    }
+    return this.readFleetRun(sessionId)
   }
 
   private async lookupFleetRun(params: FleetRunParams) {
     const sessionId = fleetRunSessionId(params.key)
-    await this.fleetAdmissions.get(sessionId)?.catch(() => undefined)
+    await this.fleetOperations.get(sessionId)?.catch(() => undefined)
     const current = this.sessions.get(sessionId)
     if (current !== undefined) await this.flushFleetRun(current.handle.agent)
-    const prompt = await this.storedFleetRunPrompt(sessionId)
+    const prompt = fleetRunPrompt(await this.storedFleetRunEvents(sessionId))
     if (prompt === undefined) return { kind: 'not-found' }
     if (!fleetRunInputMatches(prompt, params.input)) return { kind: 'conflict' }
     return fleetRunReceipt(sessionId, prompt)
   }
 
-  private async submitFleetRun(params: FleetRunParams) {
+  private submitFleetRun(params: FleetRunParams) {
     const sessionId = fleetRunSessionId(params.key)
-    const previous = this.fleetAdmissions.get(sessionId)
-    const operation = Promise.resolve(previous)
-      .catch(() => undefined)
-      .then(() => this.admitFleetRun(sessionId, params.input))
-    this.fleetAdmissions.set(sessionId, operation)
+    return this.withFleetRun(sessionId, () => this.admitFleetRun(sessionId, params.input))
+  }
+
+  private async withFleetRun<T>(sessionId: SessionId, work: () => Promise<T>): Promise<T> {
+    const previous = this.fleetOperations.get(sessionId)
+    const operation = Promise.resolve(previous).catch(() => undefined).then(work)
+    this.fleetOperations.set(sessionId, operation)
     try {
       return await operation
     } finally {
-      if (this.fleetAdmissions.get(sessionId) === operation) this.fleetAdmissions.delete(sessionId)
+      if (this.fleetOperations.get(sessionId) === operation) this.fleetOperations.delete(sessionId)
     }
   }
 
@@ -727,7 +762,7 @@ export class HarnessSdkJsonRpcServer {
     // A failed transport response may follow a successful queue write. Drain
     // that exact Session before deciding whether there is any input to submit.
     if (existing !== undefined) await this.flushFleetRun(existing.handle.agent)
-    const saved = await this.storedFleetRunPrompt(sessionId)
+    const saved = fleetRunPrompt(await this.storedFleetRunEvents(sessionId))
     if (saved !== undefined) {
       return fleetRunInputMatches(saved, input)
         ? fleetRunReceipt(sessionId, saved)
@@ -758,8 +793,10 @@ export class HarnessSdkJsonRpcServer {
     return this.openSession(sessionId, false)
   }
 
-  private openSession(sessionId: string, resume: boolean, permissionMode?: string): Promise<SessionRecord> {
-    const creation = this.createSession(sessionId, resume, permissionMode)
+  private openSession(
+    sessionId: string, resume: boolean, permissionMode?: string, fleetRecovery?: 'recover' | 'stop',
+  ): Promise<SessionRecord> {
+    const creation = this.createSession(sessionId, resume, permissionMode, fleetRecovery)
     this.sessionCreations.set(sessionId, creation)
     void creation.then(
       () => { this.sessionCreations.delete(sessionId) },
@@ -768,7 +805,9 @@ export class HarnessSdkJsonRpcServer {
     return creation
   }
 
-  private async createSession(sessionId: string, resume: boolean, permissionMode?: string): Promise<SessionRecord> {
+  private async createSession(
+    sessionId: string, resume: boolean, permissionMode?: string, fleetRecovery?: 'recover' | 'stop',
+  ): Promise<SessionRecord> {
     const permissions = permissionMode === undefined ? undefined : this.ctx.get('permissionPresets')
     if (permissionMode !== undefined) {
       if (permissions === undefined) throw new Error('session/resume permissionMode requires the permission-presets service')
@@ -793,8 +832,13 @@ export class HarnessSdkJsonRpcServer {
     const handle = await (resume ? this.ctx.agents.resume({
       resumeSessionId: brandString<SessionId>(sessionId),
       agentOptions,
+      resumePendingInput: fleetRecovery === 'recover',
       // The initialized route replaces the restored Session's model selection.
       setup: (_agentCtx, agent) => {
+        if (fleetRecovery !== undefined) {
+          if (fleetRecovery === 'stop') agent.cancel({ kind: 'user' })
+          return
+        }
         if (permissionMode !== undefined && permissions !== undefined) {
           permissions.set(agent.session, permissionMode)
         }

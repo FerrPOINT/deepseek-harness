@@ -279,10 +279,20 @@ describe('SDK persisted session resume', () => {
     const sessionId = first.ctx.agents.list()[0]!.session.id
     await first.server.wait({ sessionId })
     expect(first.adapter.requests).toHaveLength(1)
+    const completed = await first.server.handleRequest('fleet/run/get', { runId: sessionId }) as {
+      events: { seq: number; type: string }[]
+    }
+    expect(completed).toMatchObject({ kind: 'run', status: 'completed', output: 'remembered' })
+    expect(completed.events.map(event => event.type)).toEqual(['accepted', 'started', 'output', 'ended'])
+    const after = completed.events[1]!.seq
+    await expect(first.server.handleRequest('fleet/run/get', { runId: sessionId, after }))
+      .resolves.toMatchObject({ events: completed.events.slice(2) })
     await first.server.shutdown()
     await first.ctx.fiber.dispose()
 
     const restarted = await initialized(root)
+    await expect(restarted.server.handleRequest('fleet/run/get', { runId: sessionId })).resolves.toEqual(completed)
+    await expect(restarted.server.handleRequest('fleet/run/recover', { runId: sessionId })).resolves.toEqual(completed)
     await expect(restarted.server.handleRequest('fleet/run/lookup', command)).resolves.toEqual(accepted)
     await expect(restarted.server.handleRequest('fleet/run/lookup', { ...command, input: 'changed input' }))
       .resolves.toEqual({ kind: 'conflict' })
@@ -297,7 +307,69 @@ describe('SDK persisted session resume', () => {
     const otherInstance = await initialized(await storageRoot())
     await expect(otherInstance.server.handleRequest('fleet/run/lookup', command))
       .resolves.toEqual({ kind: 'not-found' })
+    await expect(otherInstance.server.handleRequest('fleet/run/stop', { runId: sessionId }))
+      .resolves.toEqual({ kind: 'not-found' })
   })
+
+  it('stops only the addressed live Fleet run and persists its cancellation', async () => {
+    const root = await storageRoot()
+    const first = await runtime(root)
+    const adapter = new MockAdapter(['hang', 'hang'])
+    first.ctx.llm.registerAdapter(['hanging'], adapter)
+    await first.server.initialize({ cwd: root, provider: 'hanging', model: 'hanging' })
+    const submit = async (key: string) =>
+      await first.server.handleRequest('fleet/run/submit', { key, input: key }) as { runId: string }
+    const alpha = await submit('alpha')
+    const beta = await submit('beta')
+    await vi.waitFor(() => expect(adapter.requests).toHaveLength(2))
+    const stopped = await first.server.handleRequest('fleet/run/stop', { runId: alpha.runId })
+    expect(stopped).toMatchObject({ kind: 'run', runId: alpha.runId, status: 'cancelled' })
+    await expect(first.server.handleRequest('fleet/run/get', { runId: beta.runId }))
+      .resolves.toMatchObject({ kind: 'run', status: 'running' })
+    await expect(first.server.handleRequest('fleet/run/stop', { runId: alpha.runId })).resolves.toEqual(stopped)
+    await first.server.handleRequest('fleet/run/stop', { runId: beta.runId })
+    await first.server.shutdown()
+    await first.ctx.fiber.dispose()
+
+    const restarted = await initialized(root)
+    await expect(restarted.server.handleRequest('fleet/run/get', { runId: alpha.runId })).resolves.toEqual(stopped)
+    expect(restarted.adapter.requests).toHaveLength(0)
+  })
+
+  it.each(['recover-running', 'recover-queued', 'stop-queued'] as const)(
+    'restores the native durable Fleet prefix for %s',
+    async (scenario) => {
+      const first = await initialized(await storageRoot())
+      const { runId } = await first.server.handleRequest('fleet/run/submit', {
+        key: 'restore', input: 'original input',
+      }) as { runId: string }
+      const sessionId = brandString<SessionId>(runId)
+      await first.server.wait({ sessionId })
+      const live = first.ctx.agents.get(sessionId)!.session
+      const second = await initialized(await storageRoot())
+
+      // Use the actual native log and only the prefix durable at the simulated crash.
+      const log = live.snapshotEvents()
+      const boundary = log.find(event => scenario === 'recover-running'
+        ? event.type === 'step/start'
+        : event.type === 'agent/inbox/spliced' && event.data.inserted.some(message => message.source.kind === 'user'))!
+      await using writer = await second.ctx.sessionPersistence.create(live.header)
+      await writer.append(log.slice(0, boundary.seq + 1))
+      await writer.flush()
+      await writer.close()
+      const method = scenario === 'stop-queued' ? 'fleet/run/stop' : 'fleet/run/recover'
+      const restored = await second.server.handleRequest(method, { runId })
+      if (scenario === 'recover-queued') {
+        await second.server.wait({ sessionId })
+        await expect(second.server.handleRequest('fleet/run/get', { runId }))
+          .resolves.toMatchObject({ status: 'completed', runId })
+        expect(second.adapter.requests).toHaveLength(1)
+      } else {
+        expect(restored).toMatchObject({ status: scenario === 'stop-queued' ? 'cancelled' : 'interrupted', runId })
+        expect(second.adapter.requests).toHaveLength(0)
+      }
+    },
+  )
 
   it('restores a non-main identity, preserves history and origin, and appends a new turn', async () => {
     const root = await storageRoot()

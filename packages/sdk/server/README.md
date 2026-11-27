@@ -98,6 +98,19 @@ the input is claimed or this SDK process restarts. Replays of a stored receipt
 send no new input and do not reopen the Session. Fleet-managed Session IDs use
 the reserved `fleet-run-` prefix.
 
+The managed client reads the exact run with `fleet/run/get { runId, after? }`.
+The response contains the current status, latest assistant text, and public
+events with native Session sequence numbers greater than `after`. Omitting
+`after` reads from the start. The status is one of `queued`, `running`,
+`completed`, `failed`, `cancelled`, or `interrupted`.
+
+`fleet/run/recover { runId }` restores a saved, unfinished run using native
+Session recovery. A persisted input that was still queued can be processed
+once. A turn interrupted after it started is closed as `interrupted` and does
+not invoke the model again. `fleet/run/stop { runId }` cancels that run's live or
+persisted input. A run that already ended retains its recorded status. Unknown
+IDs return `{ kind: "not-found" }`.
+
 ### Native user questions
 
 An initialized client advertising `capabilities.userQuestions` handles questions for this server's exact owned root Agents. The server forwards the shared `user-questions/request` event as a `user-question/ask` RPC and validates the answer before a tool or approval consumes it. Foreign Agents and clients without that capability retain their existing native answerers. Tool cancellation and server shutdown abort pending requests and notify the host; connection failure returns an error. The [protocol](../protocol/README.md#native-user-questions) defines the wire shapes and failure codes.

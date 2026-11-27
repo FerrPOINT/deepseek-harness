@@ -138,6 +138,8 @@ export interface CreateAgentOptions {
 export interface ResumeAgentOptions {
   /** The persisted session id to load and use as the live agent/session identity. */
   readonly resumeSessionId: SessionId
+  /** Drive input already stored in the inbox after the restored agent has been published. */
+  readonly resumePendingInput?: boolean
   /** Route fallback and output controls; see {@link AgentOptions} for live accessor semantics. */
   readonly agentOptions?: AgentOptions
   /** Optional creation-only cancellation signal for persistence load/setup; detached before return. */

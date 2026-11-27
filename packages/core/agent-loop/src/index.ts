@@ -167,6 +167,7 @@ interface AgentInitializationOptions {
   readonly session: Session
   readonly agentOptions: AgentOptions
   readonly source: SessionStartSource
+  readonly resumePendingInput?: boolean | undefined
   readonly stored?: StoredSession | undefined
   readonly setup?: AgentSetup | undefined
   readonly signal?: AbortSignal | undefined
@@ -637,6 +638,7 @@ export class AgentLoop extends Service implements AgentFactory {
           detachAgent = loopCtx.agents.enter(agent)
           await loopCtx.agents.announce(agent, source, abort.signal)
           assertLive()
+          if (options.resumePendingInput === true) agent.wakePendingInput()
           ready = true
           callerSignal?.removeEventListener('abort', onCallerAbort)
           return { agent, dispose }
@@ -829,6 +831,7 @@ export class AgentLoop extends Service implements AgentFactory {
           agentOptions: options.agentOptions ?? {},
           setup: options.setup,
           signal: options.signal,
+          resumePendingInput: options.resumePendingInput,
           source: 'resume',
         })
       } finally {
