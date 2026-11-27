@@ -11,6 +11,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { resolve } from 'node:path'
 import { QueryActivity } from './query-activity.ts'
 import { SdkUserQuestionBridge } from './user-questions.ts'
+import { FleetInteractions, type FleetInteraction } from './fleet-interactions.ts'
 import { queryCommand } from './query-input.ts'
 import { queryCommandImages, queryContent } from './query-content.ts'
 import {
@@ -21,6 +22,7 @@ import {
   fleetRunSessionId,
   fleetRunSnapshot,
   fleetRunTerminal,
+  isFleetRunId,
   requireOrdinarySession,
   type FleetRunParams,
 } from './fleet-run.ts'
@@ -157,6 +159,7 @@ export class HarnessSdkJsonRpcServer {
   private authFiber: { dispose(): Promise<void> } | undefined
   private readonly sessions = new Map<string, SessionRecord>()
   private readonly sessionCreations = new Map<string, Promise<SessionRecord>>()
+  private readonly fleetInteractions = new FleetInteractions()
   private readonly fleetOperations = new Map<SessionId, Promise<unknown>>()
   private readonly commandTasks = new Set<Promise<CommandExecution | undefined>>()
   private readonly queryInvocation = new AsyncLocalStorage<QueryActivity>()
@@ -187,7 +190,9 @@ export class HarnessSdkJsonRpcServer {
       })
     })
     this.disposers.push(ctx.on('approval/request', async (request, next) => {
-      if (!this.approvalRequests || !this.ownsAgent(request.agent)) return next()
+      if (!this.approvalRequests) return next()
+      const root = this.ownedRoot(request.agent)
+      if (root === undefined) return next()
       const params: ApprovalRequestParams = {
         sessionId: request.agent.session.id,
         toolName: request.toolName,
@@ -197,7 +202,9 @@ export class HarnessSdkJsonRpcServer {
       const signal = request.signal === undefined
         ? this.lifetime.signal
         : AbortSignal.any([request.signal, this.lifetime.signal])
-      const result = await this.transport.request('approval/request', params, signal)
+      const result = await (isFleetRunId(root.session.id)
+        ? this.fleetInteractions.askApproval(root, params, signal)
+        : this.transport.request('approval/request', params, signal))
       if (result === null || typeof result !== 'object' || !('outcome' in result)
         || (result.outcome !== 'allowed-once' && result.outcome !== 'rejected' && result.outcome !== 'cancelled')) {
         throw new TypeError('approval/request response requires an allowed-once, rejected, or cancelled outcome')
@@ -206,7 +213,10 @@ export class HarnessSdkJsonRpcServer {
     }))
     const serverOptions = this.options
     this.userQuestions = new SdkUserQuestionBridge(ctx, transport, agent =>
-      this.sessions.get(agent.session.id)?.handle.agent === agent)
+      this.sessions.get(agent.session.id)?.handle.agent === agent,
+    (agent, params, signal) => isFleetRunId(agent.session.id)
+      ? this.fleetInteractions.askQuestion(agent, params, signal)
+      : undefined)
     this.disposers.push(ctx.on('schedule/resolve-agent', async (sessionId) => {
       // Startup delivery must wait for the SDK model route and output limit.
       await this.initialization.promise
@@ -489,24 +499,24 @@ export class HarnessSdkJsonRpcServer {
   /**
    * Resolves live SDK ownership; root lookup failures other than SubagentError/UNAUTHORIZED propagate.
    * @param agent - Agent whose requests need routing.
-   * @returns Whether this server owns the Agent or its live subagent tree root.
+   * @returns The SDK-owned root that can receive a decision for this live Agent.
    */
-  private ownsAgent(agent: Agent): boolean {
+  private ownedRoot(agent: Agent): Agent | undefined {
     const agents = this.ctx.agents
-    if (agents.get(agent.id) !== agent) return false
-    if (this.sessions.get(agent.session.id)?.handle.agent === agent) return true
+    if (agents.get(agent.id) !== agent) return undefined
+    if (this.sessions.get(agent.session.id)?.handle.agent === agent) return agent
     const subagents = this.ctx.get('subagents')
-    if (subagents === undefined) return false
+    if (subagents === undefined) return undefined
     let root: Agent
     try {
       root = subagents.rootOf(agent)
     } catch (error: unknown) {
       if (typeof error === 'object' && error !== null
         && 'name' in error && error.name === 'SubagentError'
-        && 'code' in error && error.code === 'UNAUTHORIZED') return false
+        && 'code' in error && error.code === 'UNAUTHORIZED') return undefined
       throw error
     }
-    return this.sessions.get(root.session.id)?.handle.agent === root
+    return this.sessions.get(root.session.id)?.handle.agent === root ? root : undefined
   }
 
   /** Reject a retained record whose Agent left the registry, naming what the server observed. */
@@ -636,6 +646,22 @@ export class HarnessSdkJsonRpcServer {
         const { sessionId } = fleetRunAddress(params)
         return this.withFleetRun(sessionId, () => this.controlFleetRun(sessionId, method === 'fleet/run/stop'))
       }
+      case 'fleet/run/approval':
+      case 'fleet/run/question': {
+        const { runId, requestId, response, ...extra } = params ?? {}
+        if (Object.keys(extra).length !== 0) throw new TypeError('Unknown Fleet decision fields')
+        const { sessionId } = fleetRunAddress({ runId })
+        return this.withFleetRun(sessionId, () => this.answerFleetRun(
+          sessionId, method === 'fleet/run/approval' ? 'approval' : 'question', requestId, response,
+        ))
+      }
+      case 'fleet/run/steer': {
+        const { runId, input, ...extra } = params ?? {}
+        if (Object.keys(extra).length !== 0 || typeof input !== 'string'
+          || !input.trim() || Buffer.byteLength(input) > 1024 * 1024) throw new TypeError('Invalid Fleet steering input')
+        const { sessionId } = fleetRunAddress({ runId })
+        return this.withFleetRun(sessionId, () => this.steerFleetRun(sessionId, input))
+      }
       case 'initialize':
         return this.initialize(params as unknown as InitializeParams)
       case 'session/prompt':
@@ -726,6 +752,31 @@ export class HarnessSdkJsonRpcServer {
       await agent.whenIdle()
     }
     return this.readFleetRun(sessionId)
+  }
+
+  private async answerFleetRun(
+    sessionId: SessionId, kind: FleetInteraction['kind'], requestId: unknown, response: unknown,
+  ) {
+    const record = this.sessions.get(sessionId)
+    if (record === undefined) return { kind: 'not-pending' }
+    this.assertLiveAgent(record, sessionId)
+    const agent = record.handle.agent
+    const result = this.fleetInteractions.answer(agent, kind, requestId, response)
+    if (result.kind === 'resolved') await this.flushFleetRun(agent)
+    return result
+  }
+
+  private async steerFleetRun(sessionId: SessionId, input: string) {
+    const snapshot = await this.readFleetRun(sessionId)
+    if (snapshot.kind === 'not-found') return snapshot
+    const record = this.sessions.get(sessionId)
+    if (snapshot.status !== 'running' || record === undefined) return { kind: 'not-running' }
+    this.assertLiveAgent(record, sessionId)
+    const agent = record.handle.agent
+    if (agent.status !== 'running') return { kind: 'not-running' }
+    agent.inject(createUserMessage({ content: [{ type: 'text', text: input }], source: { kind: 'user' } }))
+    await this.flushFleetRun(agent)
+    return { kind: 'accepted' }
   }
 
   private async lookupFleetRun(params: FleetRunParams) {

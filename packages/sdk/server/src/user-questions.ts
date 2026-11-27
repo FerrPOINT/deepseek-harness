@@ -16,11 +16,12 @@ export class SdkUserQuestionBridge {
     private readonly ctx: Context,
     private readonly transport: JsonRpcTransportPeer,
     ownsAgent: (agent: Agent) => boolean,
+    private readonly askFleet: (agent: Agent, request: SdkUserQuestionRequest, signal: AbortSignal) => Promise<unknown> | undefined,
   ) {
     this.unregister = ctx.on('user-questions/request', async (request, next) => {
       const agent = request.agent
       if (!this.enabled || agent === undefined || !ownsAgent(agent)) return next()
-      return this.ask(request, String(agent.session.id))
+      return this.ask(request, agent)
     })
   }
 
@@ -31,7 +32,8 @@ export class SdkUserQuestionBridge {
     this.questionShutdown.abort(new UserQuestionError('SDK server is shutting down', 'ASK_ABORTED'))
   }
 
-  private async ask(request: AskUserQuestionRequest, sessionId: string): Promise<SdkUserQuestionAnswer> {
+  private async ask(request: AskUserQuestionRequest, agent: Agent): Promise<SdkUserQuestionAnswer> {
+    const sessionId = String(agent.session.id)
     const params: SdkUserQuestionRequest = { requestId: randomUUID(), sessionId, questions: request.questions }
     const signal = request.signal === undefined ? this.questionShutdown.signal
       : AbortSignal.any([request.signal, this.questionShutdown.signal])
@@ -43,9 +45,10 @@ export class SdkUserQuestionBridge {
         this.ctx.logger.warn(`SDK question cancellation could not reach the host: ${String(error)}`)
       }
     }
-    signal.addEventListener('abort', cancelled, { once: true })
     try {
-      const result = await this.transport.request('user-question/ask', params, signal)
+      const fleet = this.askFleet(agent, params, signal)
+      if (fleet === undefined) signal.addEventListener('abort', cancelled, { once: true })
+      const result = await (fleet ?? this.transport.request('user-question/ask', params, signal))
       return parseHostAnswer(result, request.questions.map(question => question.id))
     } catch (error) {
       if (error instanceof UserQuestionError) throw error
@@ -58,7 +61,7 @@ export class SdkUserQuestionBridge {
 }
 
 /** Validate the untrusted host response before it enters a tool result or approval decision. */
-function parseHostAnswer(value: unknown, questionIds: readonly string[]): SdkUserQuestionAnswer {
+export function parseHostAnswer(value: unknown, questionIds: readonly string[]): SdkUserQuestionAnswer {
   const badAnswer = (): never => { throw new UserQuestionError('SDK host must answer each question id exactly once with selected labels and optional custom text', 'BAD_ANSWER') }
   if (value !== null && typeof value === 'object' && 'cancelled' in value) {
     if (value.cancelled !== true || Object.keys(value).length !== 1) return badAnswer()

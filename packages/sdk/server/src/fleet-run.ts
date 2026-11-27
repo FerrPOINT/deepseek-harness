@@ -5,6 +5,7 @@ import { brandString } from '@deepseek-ai/dsh-brand'
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
 import type { UserMessage } from '@deepseek-ai/dsh-llm'
 import { extractTextContent } from '@deepseek-ai/dsh-llm/message'
+import { fleetInteractionRecord, type FleetInteraction } from './fleet-interactions.ts'
 
 const prefix = 'fleet-run-'
 
@@ -29,6 +30,10 @@ export interface FleetRunParams extends FleetRunIdentity {
 export function fleetRunSessionId({ deploymentId, key }: FleetRunParams): SessionId {
   const hash = createHash('sha256').update(deploymentId).update('\0').update(key).digest('hex')
   return brandString<SessionId>(prefix + hash)
+}
+
+export function isFleetRunId(value: unknown): value is SessionId {
+  return typeof value === 'string' && /^fleet-run-[a-f0-9]{64}$/.test(value)
 }
 
 export function requireOrdinarySession(sessionId: string): void {
@@ -62,7 +67,7 @@ export function fleetRunParams(params: Record<string, unknown> | undefined): Fle
 
 export function fleetRunAddress(params: Record<string, unknown> | undefined, allowCursor = false) {
   const runId = params?.runId
-  if (params === undefined || typeof runId !== 'string' || !/^fleet-run-[a-f0-9]{64}$/.test(runId)
+  if (params === undefined || !isFleetRunId(runId)
     || Object.keys(params).some(field => field !== 'runId' && !(allowCursor && field === 'after'))) {
     throw new TypeError('Fleet operation requires a native run ID')
   }
@@ -70,7 +75,7 @@ export function fleetRunAddress(params: Record<string, unknown> | undefined, all
   if (typeof after !== 'number' || !Number.isSafeInteger(after) || after < -1) {
     throw new TypeError('Fleet event cursor must be an integer greater than or equal to -1')
   }
-  return { sessionId: brandString<SessionId>(runId), after }
+  return { sessionId: runId, after }
 }
 
 /** A Fleet session has one submitted prompt. Queue removal never erases its original receipt. */
@@ -103,6 +108,8 @@ type FleetRunEvent =
   | { seq: number; type: 'accepted'; messageId: string }
   | { seq: number; type: 'started' }
   | { seq: number; type: 'output'; text: string }
+  | { seq: number; type: 'interaction-requested'; interaction: FleetInteraction }
+  | { seq: number; type: 'interaction-closed'; kind: FleetInteraction['kind']; requestId: string; answered: boolean }
   | { seq: number; type: 'ended'; status: TerminalStatus; reason: string }
 
 function terminalStatus(reason: string): TerminalStatus {
@@ -128,6 +135,7 @@ export function fleetRunSnapshot(sessionId: SessionId, log: readonly SessionEven
   let openTurn: number | undefined
   let owningTurn: number | undefined
   let output = ''
+  const pending = new Map<string, FleetInteraction>()
   for (const event of log.slice(seq + 1)) {
     if (event.type === 'turn/start') {
       openTurn = event.data.turn
@@ -157,6 +165,14 @@ export function fleetRunSnapshot(sessionId: SessionId, log: readonly SessionEven
         events.push({ seq: event.seq, type: 'ended', status, reason })
         break
       }
+    } else if (owningTurn !== undefined) {
+      const interaction = fleetInteractionRecord(event)
+      if (interaction?.type === 'interaction-requested') {
+        pending.set(interaction.interaction.requestId, interaction.interaction)
+        events.push(interaction)
+      } else if (interaction?.type === 'interaction-closed' && pending.delete(interaction.requestId)) {
+        events.push(interaction)
+      }
     }
   }
   return {
@@ -167,6 +183,7 @@ export function fleetRunSnapshot(sessionId: SessionId, log: readonly SessionEven
     revision: identity.revision,
     status,
     output,
+    pending: fleetRunTerminal(status) ? [] : [...pending.values()],
     cursor: events.at(-1)?.seq ?? seq,
     events: events.filter(event => event.seq > after),
   }

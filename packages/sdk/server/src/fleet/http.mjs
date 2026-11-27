@@ -5,7 +5,7 @@ import { setTimeout } from 'node:timers/promises'
 
 const id = /^[a-zA-Z0-9_:.@/-]{1,255}$/
 const digest = /^[a-f0-9]{64}$/
-const runPath = /^\/v1\/runs\/(fleet-run-[a-f0-9]{64})(?:\/(events|stop))?$/
+const runPath = /^\/v1\/runs\/(fleet-run-[a-f0-9]{64})(?:\/(events|stop|steer|approval|question))?$/
 const revisionHeader = 'x-dsh-deployment-revision'
 const active = new Set(['queued', 'running'])
 const statuses = new Set([...active, 'completed', 'failed', 'cancelled', 'interrupted'])
@@ -15,6 +15,9 @@ const endpoints = {
   run_status: { method: 'GET', path: '/v1/runs/{run_id}' },
   run_events: { method: 'GET', path: '/v1/runs/{run_id}/events' },
   run_stop: { method: 'POST', path: '/v1/runs/{run_id}/stop' },
+  run_steer: { method: 'POST', path: '/v1/runs/{run_id}/steer' },
+  run_approval: { method: 'POST', path: '/v1/runs/{run_id}/approval' },
+  run_question: { method: 'POST', path: '/v1/runs/{run_id}/question' },
 }
 
 class HttpError extends Error {
@@ -68,18 +71,38 @@ function capability({ deploymentId, revision }) {
       run_status: true,
       run_events_sse: true,
       run_stop: true,
+      run_steer: true,
+      run_approval: true,
+      run_approval_response: true,
+      approval_events: true,
+      run_question_response: true,
+      question_events: true,
     },
     endpoints,
   }
 }
 
+function interactionView(run, interaction) {
+  const identity = { run_id: run.runId, session_id: run.sessionId, request_id: interaction.requestId }
+  if (interaction.kind === 'approval') {
+    return { ...identity, event: 'approval.request', prompt: interaction.prompt, choices: ['once', 'deny'] }
+  }
+  return { ...identity, event: 'question.request', questions: interaction.questions }
+}
+
 function runView(run) {
+  const approvals = run.pending.filter(interaction => interaction.kind === 'approval')
+    .map(interaction => interactionView(run, interaction))
+  const questions = run.pending.filter(interaction => interaction.kind === 'question')
+    .map(interaction => interactionView(run, interaction))
   return {
     object: 'hermes.run',
     run_id: run.runId,
     session_id: run.sessionId,
     deployment_revision: run.revision,
-    status: run.status,
+    status: approvals.length === 0 ? run.status : 'waiting_for_approval',
+    ...(approvals.length === 0 ? {} : { approval: approvals[0], approvals }),
+    ...(questions.length === 0 ? {} : { questions }),
     output: run.output,
     completed: run.status === 'completed',
     partial: run.status !== 'completed' && run.output !== '',
@@ -93,6 +116,9 @@ function eventPayload(run, event) {
     case 'accepted': return { ...identity, event: 'run.created' }
     case 'started': return { ...identity, event: 'run.started' }
     case 'output': return { ...identity, event: 'message.completed', text: event.text }
+    case 'interaction-requested': return interactionView(run, event.interaction)
+    case 'interaction-closed':
+      return { ...identity, event: event.kind + '.closed', request_id: event.requestId, answered: event.answered }
     case 'ended': return { ...runView(run), event: 'run.' + event.status }
     default: throw new Error('Unknown native DSH run event')
   }
@@ -197,10 +223,48 @@ export function fleetHttpServer(config, peer, isReady) {
       && (!lookup || result.replayed), 503, 'Run acceptance is not verified')
     json(response, lookup ? 200 : 202, {
       run_id: result.runId,
-      status: result.replayed ? (await readRun(result.runId, signal)).status : 'started',
+      status: result.replayed ? runView(await readRun(result.runId, signal)).status : 'started',
       replayed: result.replayed,
       deployment_revision: result.revision,
     }, { 'X-Hermes-Session-Id': result.sessionId })
+  }
+
+  async function reply(request, response, runId, action, signal) {
+    const { value } = await readRequest(request)
+    const { request_id: requestId } = value
+    check(typeof requestId === 'string' && /^[a-f0-9-]{36}$/.test(requestId), 400, 'Invalid decision request identity')
+    let answer
+    if (action === 'approval') {
+      check(Object.keys(value).length === 3 && value.resolve_all === false
+        && (value.choice === 'once' || value.choice === 'deny'), 400, 'Expected a decision for one action')
+      answer = value.choice
+    } else {
+      check(Object.keys(value).length === 2 && Object.hasOwn(value, 'response'), 400, 'Expected a structured question response')
+      answer = value.response
+    }
+    const run = await readRun(runId, signal)
+    check(run.revision === revision && active.has(run.status), 409, 'Original DSH run is unavailable for the decision')
+    const result = await rpc(action, { runId, requestId, response: answer }, signal)
+    check(result.kind !== 'invalid-answer', 400, 'Decision does not match the request')
+    check(result.kind === 'resolved', 409, 'That request is no longer pending for this run')
+    json(response, 200, {
+      object: 'hermes.run.' + action + '_response',
+      run_id: runId,
+      request_id: requestId,
+      resolved: 1,
+      ...(action === 'approval' ? { choice: answer } : {}),
+    })
+  }
+
+  async function steer(request, response, runId, signal) {
+    const { value } = await readRequest(request)
+    check(Object.keys(value).length === 1 && typeof value.input === 'string'
+      && value.input.trim() && Buffer.byteLength(value.input) <= 1024 * 1024, 400, 'Invalid guidance input')
+    const run = await readRun(runId, signal)
+    check(run.revision === revision && run.status === 'running', 409, 'Original DSH run cannot accept guidance')
+    const result = await rpc('steer', { runId, input: value.input }, signal)
+    check(result.kind === 'accepted', 409, 'DSH run cannot accept guidance')
+    json(response, 200, { object: 'hermes.run.steer', run_id: runId, accepted: true })
   }
 
   return createServer(async (request, response) => {
@@ -228,6 +292,10 @@ export function fleetHttpServer(config, peer, isReady) {
           await rpc('stop', { runId }, signal)
         }
         return json(response, 200, runView(await readRun(runId, signal)))
+      }
+      if (method === 'POST' && action === 'steer') return await steer(request, response, runId, signal)
+      if (method === 'POST' && (action === 'approval' || action === 'question')) {
+        return await reply(request, response, runId, action, signal)
       }
       throw new HttpError(405, 'Unsupported method')
     } catch (error) {

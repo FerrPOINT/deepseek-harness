@@ -49,7 +49,9 @@ async function main(configPath) {
   })
   try {
     await once(worker, 'spawn')
-    const result = await peer.request('initialize', { cwd, provider, model }, AbortSignal.timeout(30000))
+    const result = await peer.request('initialize', {
+      cwd, provider, model, approvalRequests: true, capabilities: { userQuestions: true },
+    }, AbortSignal.timeout(30000))
     if (result.serverInfo?.name !== 'deepseek-harness-sdk-runtime') throw new Error('Wrong SDK worker')
     ready = true
     server.listen(port, '0.0.0.0')

@@ -12,6 +12,7 @@ import PermissionPresetService from '@deepseek-ai/dsh-permission-presets'
 import SandboxPolicyService from '@deepseek-ai/dsh-sandbox-policy'
 import ShellExecutor from '@deepseek-ai/dsh-shell'
 import { ApprovalService } from '@deepseek-ai/dsh-user-approval'
+import UserQuestions from '@deepseek-ai/dsh-user-questions'
 import { type SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
 import * as JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import type { JsonRpcTransportPeer, SessionEventNotification } from '@deepseek-ai/dsh-sdk-protocol'
@@ -403,6 +404,101 @@ describe('SDK persisted session resume', () => {
     expect(await (await fetch(base + run, { headers: auth })).json())
       .toMatchObject({ status: 'completed', output: 'http result', completed: true })
     expect(afterRestart.requests).toHaveLength(0)
+  })
+
+  it('routes approval and question replies to their exact DSH run and drops stopped requests', async () => {
+    const root = await storageRoot()
+    const { ctx, server, adapter } = await runtime(root)
+    await ctx.plugin(UserQuestions)
+    await ctx.plugin(ApprovalService, { policy: 'ask' })
+    const reply = { answers: [{ id: 'format', selected: ['JSON'] }] }
+    const outcomes: unknown[] = []
+    ctx.on('agent/pre-step', async ({ agent, messages, signal }, next) => {
+      const question = { id: 'format', question: 'Which format?', options: [{ label: 'JSON' }] }
+      try {
+        const answer = await ctx.userQuestions.ask({ agent, questions: [question], signal })
+        outcomes.push(answer)
+      } catch (error: unknown) {
+        if (!signal.aborted) throw error
+        return next()
+      }
+      if (messages.some(message => message.content.some(block => block.type === 'text' && block.text === 'alpha'))) {
+        outcomes.push(await ctx.approval.request({ agent, toolName: 'fixture-write', reason: 'Save the report?', signal }))
+      }
+      return next()
+    })
+    await server.initialize({
+      cwd: root, provider: 'mock', model: 'mock', approvalRequests: true, capabilities: { userQuestions: true },
+    })
+    const revision = 'b'.repeat(64)
+    const token = 'http-fixture-' + 'a'.repeat(43)
+    const config = { token, revision, deploymentId: 'fixture-alpha', provider: 'mock', model: 'mock' }
+    const http = fleetHttpServer(config, { request: (method: string, params: Record<string, unknown>) =>
+      server.handleRequest(method, params) }, () => true)
+    cleanups.push(async () => { http.close(); http.closeAllConnections() })
+    http.listen(0, '127.0.0.1')
+    await once(http, 'listening')
+    const address = http.address()
+    if (address === null || typeof address === 'string') throw new Error('HTTP fixture was not bound')
+    const base = 'http://127.0.0.1:' + address.port
+    const auth = { Authorization: 'Bearer ' + token }
+    const get = (path: string) => fetch(base + path, { headers: auth })
+    const post = (path: string, value: object, key = '') => fetch(base + path, {
+      method: 'POST',
+      headers: { ...auth, 'Idempotency-Key': key, 'X-DSH-Deployment-Revision': revision, 'Content-Type': 'application/json' },
+      body: JSON.stringify(value),
+    })
+    const submit = async (key: string) => {
+      const response = await post('/v1/runs', { input: key, session_id: 'fleet:fixture-chat' }, key)
+      expect(response.status).toBe(202)
+      return '/v1/runs/' + (await response.json()).run_id
+    }
+    const alpha = await submit('alpha')
+    const beta = await submit('beta')
+    const alphaQ = await vi.waitFor(async () => {
+      const state = await (await get(alpha)).json()
+      expect(state, 'run waiting for its native question').toMatchObject({ questions: [expect.any(Object)] })
+      return state.questions[0].request_id as string
+    })
+    const betaQ = await vi.waitFor(async () => {
+      const state = await (await get(beta)).json()
+      expect(state, 'run waiting for its native question').toMatchObject({ questions: [expect.any(Object)] })
+      return state.questions[0].request_id as string
+    })
+    expect(alphaQ).not.toBe(betaQ)
+    expect((await post(beta + '/question', { request_id: alphaQ, response: reply })).status).toBe(409)
+    expect((await post(alpha + '/question', {
+      request_id: alphaQ, response: { answers: [{ id: 'format', selected: ['unavailable'] }] },
+    })).status).toBe(400)
+    expect((await post(alpha + '/question', { request_id: alphaQ, response: reply })).status).toBe(200)
+    expect((await post(alpha + '/question', { request_id: alphaQ, response: reply })).status).toBe(409)
+    const approval = await vi.waitFor(async () => {
+      const state = await (await get(alpha)).json()
+      expect(state).toMatchObject({
+        status: 'waiting_for_approval', approval: { prompt: 'Save the report?', choices: ['once', 'deny'] },
+      })
+      return state.approval.request_id as string
+    })
+    const action = { request_id: approval, choice: 'once', resolve_all: false }
+    expect((await post(beta + '/approval', action)).status).toBe(409)
+    expect((await post(alpha + '/approval', { ...action, choice: 'always' })).status).toBe(400)
+    expect((await post(alpha + '/approval', { ...action, resolve_all: true })).status).toBe(400)
+    expect((await post(alpha + '/approval', action)).status).toBe(200)
+    await server.wait({ sessionId: alpha.split('/').at(-1)! })
+    const completed = await (await get(alpha + '/events')).text()
+    expect(completed).toContain('event: question.request')
+    expect(completed).toContain('event: question.closed')
+    expect(completed).toContain('event: approval.request')
+    expect(completed).toContain('event: approval.closed')
+    expect(completed).toContain('event: run.completed')
+    expect(completed).not.toContain(betaQ)
+    expect((await fetch(base + beta + '/stop', { method: 'POST', headers: auth })).status).toBe(200)
+    expect((await post(beta + '/question', { request_id: betaQ, response: reply })).status).toBe(409)
+    const cancelled = await (await get(beta + '/events')).text()
+    expect(cancelled).toContain('event: question.closed')
+    expect(cancelled).toContain('event: run.cancelled')
+    expect(outcomes).toEqual([reply, 'allowed-once'])
+    expect(adapter.requests).toHaveLength(1)
   })
 
   it('stops only the addressed live Fleet run and persists its cancellation', async () => {
