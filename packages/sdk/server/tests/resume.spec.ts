@@ -1,3 +1,4 @@
+import { once } from 'node:events'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -16,6 +17,7 @@ import * as JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-j
 import type { JsonRpcTransportPeer, SessionEventNotification } from '@deepseek-ai/dsh-sdk-protocol'
 import { MockAdapter, textResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import { HarnessSdkJsonRpcServer } from '../src/index.ts'
+import { fleetHttpServer } from '../src/fleet/http.mjs'
 
 const cleanups: (() => Promise<void>)[] = []
 afterEach(async () => {
@@ -282,9 +284,10 @@ describe('SDK persisted session resume', () => {
     ])
     expect(accepted).toEqual({
       kind: 'accepted', runId: expect.any(String), messageId: expect.any(String),
-      sessionId: command.sessionId, revision: command.revision,
+      sessionId: command.sessionId, revision: command.revision, replayed: false,
     })
-    expect(concurrent).toEqual(accepted)
+    const replayed = { ...(accepted as object), replayed: true }
+    expect(concurrent).toEqual(replayed)
     expect(first.ctx.agents.list()).toHaveLength(1)
     const sessionId = first.ctx.agents.list()[0]!.session.id
     await first.server.wait({ sessionId })
@@ -303,10 +306,10 @@ describe('SDK persisted session resume', () => {
     const restarted = await initialized(root)
     await expect(restarted.server.handleRequest('fleet/run/get', { runId: sessionId })).resolves.toEqual(completed)
     await expect(restarted.server.handleRequest('fleet/run/recover', { runId: sessionId })).resolves.toEqual(completed)
-    await expect(restarted.server.handleRequest('fleet/run/lookup', command)).resolves.toEqual(accepted)
+    await expect(restarted.server.handleRequest('fleet/run/lookup', command)).resolves.toEqual(replayed)
     await expect(restarted.server.handleRequest('fleet/run/lookup', { ...command, input: 'changed input' }))
       .resolves.toEqual({ kind: 'conflict' })
-    await expect(restarted.server.handleRequest('fleet/run/submit', command)).resolves.toEqual(accepted)
+    await expect(restarted.server.handleRequest('fleet/run/submit', command)).resolves.toEqual(replayed)
     for (const changed of [
       { input: 'changed input' }, { sessionId: 'fleet:other-chat' },
       { requestHash: 'd'.repeat(64) }, { revision: 'e'.repeat(64) },
@@ -329,6 +332,77 @@ describe('SDK persisted session resume', () => {
     expect(otherAccepted).not.toMatchObject({ runId: sessionId })
     await expect(otherInstance.server.handleRequest('fleet/run/stop', { runId: sessionId }))
       .resolves.toEqual({ kind: 'not-found' })
+  })
+
+  it('serves the common Fleet HTTP acceptance, status, SSE replay and exact controls', async () => {
+    const root = await storageRoot()
+    const first = await runtime(root)
+    const adapter = new MockAdapter([textResponse('http result'), 'hang'])
+    first.ctx.llm.registerAdapter(['http-fixture'], adapter)
+    await first.server.initialize({ cwd: root, provider: 'http-fixture', model: 'http-fixture' })
+    const revision = 'b'.repeat(64)
+    const token = 'http-fixture-' + 'a'.repeat(43)
+    const config = { token, revision, deploymentId: 'fixture-alpha', provider: 'http-fixture', model: 'http-fixture' }
+    // Exercise the real SDK in-process. No imitation of its persistence, cursors, or cancellation.
+    let sdk = first.server
+    const http = fleetHttpServer(config, { request: (method: string, params: Record<string, unknown>) =>
+      sdk.handleRequest(method, params) }, () => true)
+    cleanups.push(async () => { http.close(); http.closeAllConnections() })
+    http.listen(0, '127.0.0.1')
+    await once(http, 'listening')
+    const address = http.address()
+    if (address === null || typeof address === 'string') throw new Error('HTTP fixture was not bound')
+    const base = 'http://127.0.0.1:' + address.port
+    const auth = { Authorization: 'Bearer ' + token }
+    const request = { input: 'run once', session_id: 'fleet:fixture-chat', model: 'http-fixture' }
+    const post = (path: string, key: string, value = request) => fetch(base + path, {
+      method: 'POST',
+      headers: { ...auth, 'Idempotency-Key': key, 'X-DSH-Deployment-Revision': revision, 'Content-Type': 'application/json' },
+      body: JSON.stringify(value),
+    })
+
+    expect((await fetch(base + '/v1/capabilities')).status).toBe(401)
+    expect(await (await fetch(base + '/v1/capabilities', { headers: auth })).json())
+      .toMatchObject({ platform: 'dsh', deployment_id: 'fixture-alpha', deployment_revision: revision })
+    expect((await post('/v1/runs/lookup', 'key-one')).status).toBe(404)
+    const submissions = await Promise.all([post('/v1/runs', 'key-one'), post('/v1/runs', 'key-one')])
+    expect(submissions.map(response => response.status)).toEqual([202, 202])
+    expect(submissions.map(response => response.headers.get('x-hermes-session-id')))
+      .toEqual([request.session_id, request.session_id])
+    const receipts = await Promise.all(submissions.map(response => response.json()))
+    expect(receipts.filter(receipt => receipt.replayed)).toHaveLength(1)
+    expect(receipts[0].run_id).toBe(receipts[1].run_id)
+    expect((await post('/v1/runs', 'key-one', { ...request, session_id: 'fleet:other-chat' })).status).toBe(409)
+    const run = '/v1/runs/' + receipts[0].run_id
+    const events = await (await fetch(base + run + '/events', { headers: auth })).text()
+    expect(events).toContain('event: run.created')
+    expect(events).toContain('event: run.completed')
+    expect(events).toContain('http result')
+    const cursor = events.match(/id: ([0-9]+)/)?.[1] ?? ''
+    expect(cursor).not.toBe('')
+    expect(await (await fetch(base + run + '/events', {
+      headers: { ...auth, 'Last-Event-ID': cursor },
+    })).text()).not.toContain('event: run.created')
+    expect(adapter.requests).toHaveLength(1)
+
+    const second = await (await post('/v1/runs', 'key-two')).json()
+    await vi.waitFor(() => expect(adapter.requests).toHaveLength(2))
+    const stopped = await fetch(base + '/v1/runs/' + second.run_id + '/stop', { method: 'POST', headers: auth })
+    expect(stopped.status).toBe(200)
+    expect(await stopped.json()).toMatchObject({ run_id: second.run_id, status: 'cancelled' })
+
+    await first.server.shutdown()
+    await first.ctx.fiber.dispose()
+    const restarted = await runtime(root)
+    const afterRestart = new MockAdapter([])
+    restarted.ctx.llm.registerAdapter(['http-fixture'], afterRestart)
+    sdk = restarted.server
+    await sdk.initialize({ cwd: root, provider: 'http-fixture', model: 'http-fixture' })
+    expect(await (await post('/v1/runs/lookup', 'key-one')).json())
+      .toMatchObject({ run_id: receipts[0].run_id, status: 'completed', replayed: true })
+    expect(await (await fetch(base + run, { headers: auth })).json())
+      .toMatchObject({ status: 'completed', output: 'http result', completed: true })
+    expect(afterRestart.requests).toHaveLength(0)
   })
 
   it('stops only the addressed live Fleet run and persists its cancellation', async () => {

@@ -94,7 +94,7 @@ export function fleetRunAdmissionReceipt(runId: SessionId, events: readonly Sess
     || prompt.content.length !== 1 || block?.type !== 'text' || block.text !== params.input) {
     return { kind: 'conflict' as const }
   }
-  return fleetRunReceipt(runId, prompt.id, identity)
+  return fleetRunReceipt(runId, prompt.id, identity, true)
 }
 
 type TerminalStatus = 'completed' | 'cancelled' | 'failed' | 'interrupted'
@@ -172,6 +172,10 @@ export function fleetRunSnapshot(sessionId: SessionId, log: readonly SessionEven
   }
 }
 
-export function fleetRunReceipt(runId: SessionId, messageId: UserMessage['id'], identity: FleetRunIdentity) {
-  return { kind: 'accepted' as const, runId, messageId, sessionId: identity.sessionId, revision: identity.revision }
+export function fleetRunReceipt(
+  runId: SessionId, messageId: UserMessage['id'], identity: FleetRunIdentity, replayed: boolean,
+) {
+  return {
+    kind: 'accepted' as const, runId, messageId, replayed, sessionId: identity.sessionId, revision: identity.revision,
+  }
 }

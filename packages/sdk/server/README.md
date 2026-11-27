@@ -90,7 +90,8 @@ recovers its receipt with `fleet/run/lookup`. Both methods receive the original
 The transport supplies the Fleet chat session, deployment identity, immutable
 configuration revision, and SHA-256 of the original wire request. The operation
 key and deployment ID select a stable native Session ID. An accepted receipt
-returns the run ID, original message ID, Fleet chat session ID, and revision.
+returns the run ID, original message ID, Fleet chat session ID, revision, and
+whether the response reused a durable receipt.
 A repeat with a different request for that key and deployment returns
 `{ kind: "conflict" }`. A lookup without a recorded input returns
 `{ kind: "not-found" }`.
@@ -113,6 +114,25 @@ once. A turn interrupted after it started is closed as `interrupted` and does
 not invoke the model again. `fleet/run/stop { runId }` cancels that run's live or
 persisted input. A run that already ended retains its recorded status. Unknown
 IDs return `{ kind: "not-found" }`.
+
+The Fleet HTTP transport starts the SDK worker through `dsh --profile sdk`.
+Launch `node packages/sdk/server/src/fleet/serve.mjs /absolute/path/config.json`
+with `dsh` and the released SDK packages available. The JSON configuration
+requires `deploymentId`, `revision` (SHA-256 of the deployment configuration),
+`provider`, `model`, `cwd`, `patches` (array), `port`, and `tokenFile`.
+Working directory, patch files and token file use absolute paths. Each DSH
+deployment needs its own `DSH_HOME` and workspace. Keep the configuration and
+token outside its work directory, and give the service its own private network
+access.
+
+The authenticated transport serves `GET /health` and `GET /v1/capabilities`
+after the SDK handshake. Submit and look up an exact JSON body containing
+`input` and `session_id` with `Idempotency-Key` and
+`X-DSH-Deployment-Revision`. Optional `model` and `provider` must match the
+deployment. Use the native ID in `GET /v1/runs/{id}`,
+`GET /v1/runs/{id}/events` or `POST /v1/runs/{id}/stop`. Event streams support
+`Last-Event-ID`. A status or event read resumes an unfinished run only when its
+original deployment revision is active.
 
 ### Native user questions
 

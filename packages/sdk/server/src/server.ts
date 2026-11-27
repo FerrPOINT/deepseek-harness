@@ -776,7 +776,7 @@ export class HarnessSdkJsonRpcServer {
     })
     agent.followup(prompt)
     await this.flushFleetRun(agent)
-    return fleetRunReceipt(sessionId, prompt.id, fleetRun)
+    return fleetRunReceipt(sessionId, prompt.id, fleetRun, false)
   }
 
   private async flushFleetRun(agent: Agent): Promise<void> {
