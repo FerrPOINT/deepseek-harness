@@ -633,6 +633,9 @@ export class HarnessSdkJsonRpcServer {
    */
   async handleRequest(method: string, params: Record<string, unknown> | undefined): Promise<unknown> {
     switch (method) {
+      case 'fleet/run/ready':
+        this.fleetPersistence()
+        return { kind: 'ready' }
       case 'fleet/run/submit':
         return this.submitFleetRun(fleetRunParams(params))
       case 'fleet/run/lookup':

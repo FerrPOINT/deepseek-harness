@@ -53,6 +53,8 @@ async function main(configPath) {
       cwd, provider, model, approvalRequests: true, capabilities: { userQuestions: true },
     }, AbortSignal.timeout(30000))
     if (result.serverInfo?.name !== 'deepseek-harness-sdk-runtime') throw new Error('Wrong SDK worker')
+    const transport = await peer.request('fleet/run/ready', {}, AbortSignal.timeout(3000))
+    if (transport.kind !== 'ready') throw new Error('Worker has no durable Fleet run store')
     ready = true
     server.listen(port, '0.0.0.0')
     await once(server, 'listening')

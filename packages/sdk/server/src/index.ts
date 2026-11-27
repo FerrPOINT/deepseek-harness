@@ -19,7 +19,7 @@ import { HarnessSdkJsonRpcServer } from './server.ts'
 export * from './server.ts'
 
 export const name = 'sdk-jsonrpc-server'
-export const inject = ['agents', 'workingDirectory']
+export const inject = ['agents', 'sessions', 'workingDirectory']
 
 /** JSON-RPC deployment config plus runtime-only test hooks. */
 export interface JsonRpcConfig {
