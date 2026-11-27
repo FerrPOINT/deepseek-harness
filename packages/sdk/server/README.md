@@ -82,6 +82,22 @@ Stdout carries only JSON-RPC frames, so clients can parse every byte; diagnostic
 `session/wait` observes an existing SDK-owned session through managed descendant completion and any resulting root turns. It rejects unknown or retired roots, never creates a session, and responds after the root stays idle across the descendant check. Idle children with parked inbox messages remain resident but do not delay this response; later waking input can resume them. Session notifications emitted before completion precede the response on the stdio transport. A live Agent failure remains associated with that exact session until a later committed `turn/end` accounts for the outcome; otherwise the wait rejects, including when the failure preceded the wait request. Errors already represented by a terminal remain in Session events, and later successful activity clears an earlier live failure.
 
 <a id="native-user-questions"></a>
+### Fleet run admission
+
+The managed Fleet transport submits one run with `fleet/run/submit` and
+recovers its receipt with `fleet/run/lookup`. Both methods receive the original
+`{ key, input }`. The operation key selects a stable native Session ID within
+this installation's persistence store. An accepted receipt returns that
+`runId` and the originally inserted `messageId`. A second input for the same
+key returns `{ kind: "conflict" }`. A lookup without a recorded input returns
+`{ kind: "not-found" }`.
+
+The server acknowledges acceptance after the Session's native inbox event
+passes the durability checkpoint. Reads observe that event, including after
+the input is claimed or this SDK process restarts. Replays of a stored receipt
+send no new input and do not reopen the Session. Fleet-managed Session IDs use
+the reserved `fleet-run-` prefix.
+
 ### Native user questions
 
 An initialized client advertising `capabilities.userQuestions` handles questions for this server's exact owned root Agents. The server forwards the shared `user-questions/request` event as a `user-question/ask` RPC and validates the answer before a tool or approval consumes it. Foreign Agents and clients without that capability retain their existing native answerers. Tool cancellation and server shutdown abort pending requests and notify the host; connection failure returns an error. The [protocol](../protocol/README.md#native-user-questions) defines the wire shapes and failure codes.

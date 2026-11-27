@@ -262,6 +262,43 @@ describe('SDK persisted session resume', () => {
     expect(ctx.agents.list()).toHaveLength(0)
   })
 
+  it('returns one durable Fleet run across concurrent submission and a runtime restart', async () => {
+    const root = await storageRoot()
+    const first = await initialized(root)
+    const key = 'fleet-fixture:one'
+    const command = { key, input: 'original input' }
+
+    await expect(first.server.handleRequest('fleet/run/lookup', command)).resolves.toEqual({ kind: 'not-found' })
+    const [accepted, concurrent] = await Promise.all([
+      first.server.handleRequest('fleet/run/submit', command),
+      first.server.handleRequest('fleet/run/submit', command),
+    ])
+    expect(accepted).toEqual({ kind: 'accepted', runId: expect.any(String), messageId: expect.any(String) })
+    expect(concurrent).toEqual(accepted)
+    expect(first.ctx.agents.list()).toHaveLength(1)
+    const sessionId = first.ctx.agents.list()[0]!.session.id
+    await first.server.wait({ sessionId })
+    expect(first.adapter.requests).toHaveLength(1)
+    await first.server.shutdown()
+    await first.ctx.fiber.dispose()
+
+    const restarted = await initialized(root)
+    await expect(restarted.server.handleRequest('fleet/run/lookup', command)).resolves.toEqual(accepted)
+    await expect(restarted.server.handleRequest('fleet/run/lookup', { ...command, input: 'changed input' }))
+      .resolves.toEqual({ kind: 'conflict' })
+    await expect(restarted.server.handleRequest('fleet/run/submit', command)).resolves.toEqual(accepted)
+    await expect(restarted.server.handleRequest('fleet/run/submit', { ...command, input: 'changed input' }))
+      .resolves.toEqual({ kind: 'conflict' })
+    await expect(restarted.server.prompt({ sessionId, contentBlocks: [{ type: 'text', text: 'extra prompt' }] }))
+      .rejects.toThrow('Fleet run sessions require the Fleet run API')
+    expect(restarted.ctx.agents.list()).toHaveLength(0)
+    expect(restarted.adapter.requests).toHaveLength(0)
+
+    const otherInstance = await initialized(await storageRoot())
+    await expect(otherInstance.server.handleRequest('fleet/run/lookup', command))
+      .resolves.toEqual({ kind: 'not-found' })
+  })
+
   it('restores a non-main identity, preserves history and origin, and appends a new turn', async () => {
     const root = await storageRoot()
     const first = await initialized(root)

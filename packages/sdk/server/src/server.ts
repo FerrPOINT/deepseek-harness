@@ -13,6 +13,15 @@ import { QueryActivity } from './query-activity.ts'
 import { SdkUserQuestionBridge } from './user-questions.ts'
 import { queryCommand } from './query-input.ts'
 import { queryCommandImages, queryContent } from './query-content.ts'
+import {
+  fleetRunInputMatches,
+  fleetRunParams,
+  fleetRunPrompt,
+  fleetRunReceipt,
+  fleetRunSessionId,
+  requireOrdinarySession,
+  type FleetRunParams,
+} from './fleet-run.ts'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { Agent, AgentHandle } from '@deepseek-ai/dsh-agent'
 import { admitEncodedImages, type EncodedImageAttachment, type ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
@@ -146,6 +155,7 @@ export class HarnessSdkJsonRpcServer {
   private authFiber: { dispose(): Promise<void> } | undefined
   private readonly sessions = new Map<string, SessionRecord>()
   private readonly sessionCreations = new Map<string, Promise<SessionRecord>>()
+  private readonly fleetAdmissions = new Map<SessionId, Promise<unknown>>()
   private readonly commandTasks = new Set<Promise<CommandExecution | undefined>>()
   private readonly queryInvocation = new AsyncLocalStorage<QueryActivity>()
   private readonly queryActivities = new Set<QueryActivity>()
@@ -339,6 +349,7 @@ export class HarnessSdkJsonRpcServer {
    * @throws TypeError before Session creation when an explicit time zone is not UTC or IANA Area/Location.
    */
   async prompt(params: SessionPromptParams): Promise<SessionPromptResult> {
+    requireOrdinarySession(params.sessionId)
     if (!this.initialized) throw new Error('SDK server is not initialized')
     const clientTimeZone = promptTimeZone(params.timeZone)
     const rec = await this.getOrCreateSession(params.sessionId)
@@ -369,6 +380,7 @@ export class HarnessSdkJsonRpcServer {
    * @throws on runtime failure; a recognized command failure never falls back to a prompt.
    */
   async query(params: SessionQueryParams): Promise<SessionQueryResult> {
+    requireOrdinarySession(params.sessionId)
     if (!this.initialized) throw new Error('SDK server is not initialized')
     if (this.shuttingDown) throw new Error('SDK server is shutting down')
     if (params.timeZone !== undefined) promptTimeZone(params.timeZone)
@@ -425,6 +437,7 @@ export class HarnessSdkJsonRpcServer {
    * @returns an empty result after the Agent is ready for prompts.
    */
   async resume(params: SessionResumeParams): Promise<Record<string, never>> {
+    requireOrdinarySession(params.sessionId)
     if (!this.initialized) throw new Error('SDK server is not initialized')
     if (this.shuttingDown) throw new Error('SDK server is shutting down')
     const sessionId = params.sessionId
@@ -608,6 +621,10 @@ export class HarnessSdkJsonRpcServer {
    */
   async handleRequest(method: string, params: Record<string, unknown> | undefined): Promise<unknown> {
     switch (method) {
+      case 'fleet/run/submit':
+        return this.submitFleetRun(fleetRunParams(params))
+      case 'fleet/run/lookup':
+        return this.lookupFleetRun(fleetRunParams(params))
       case 'initialize':
         return this.initialize(params as unknown as InitializeParams)
       case 'session/prompt':
@@ -663,6 +680,72 @@ export class HarnessSdkJsonRpcServer {
       default:
         throw new Error(`unknown DeepSeek Harness SDK runtime method: ${method}`)
     }
+  }
+
+  private fleetPersistence() {
+    if (!this.initialized || this.shuttingDown) throw new Error('SDK server is not ready')
+    const persistence = this.ctx.get('sessionPersistence')
+    if (persistence === undefined) throw new Error('Fleet runs require native Session persistence')
+    return persistence
+  }
+
+  private async storedFleetRunPrompt(sessionId: SessionId) {
+    const persistence = this.fleetPersistence()
+    if (await persistence.stat(sessionId) === undefined) return undefined
+    await using handle = await persistence.open(sessionId, 'read')
+    return fleetRunPrompt((await handle.read()).events)
+  }
+
+  private async lookupFleetRun(params: FleetRunParams) {
+    const sessionId = fleetRunSessionId(params.key)
+    await this.fleetAdmissions.get(sessionId)?.catch(() => undefined)
+    const current = this.sessions.get(sessionId)
+    if (current !== undefined) await this.flushFleetRun(current.handle.agent)
+    const prompt = await this.storedFleetRunPrompt(sessionId)
+    if (prompt === undefined) return { kind: 'not-found' }
+    if (!fleetRunInputMatches(prompt, params.input)) return { kind: 'conflict' }
+    return fleetRunReceipt(sessionId, prompt)
+  }
+
+  private async submitFleetRun(params: FleetRunParams) {
+    const sessionId = fleetRunSessionId(params.key)
+    const previous = this.fleetAdmissions.get(sessionId)
+    const operation = Promise.resolve(previous)
+      .catch(() => undefined)
+      .then(() => this.admitFleetRun(sessionId, params.input))
+    this.fleetAdmissions.set(sessionId, operation)
+    try {
+      return await operation
+    } finally {
+      if (this.fleetAdmissions.get(sessionId) === operation) this.fleetAdmissions.delete(sessionId)
+    }
+  }
+
+  private async admitFleetRun(sessionId: SessionId, input: string) {
+    const persistence = this.fleetPersistence()
+    const existing = this.sessions.get(sessionId)
+    // A failed transport response may follow a successful queue write. Drain
+    // that exact Session before deciding whether there is any input to submit.
+    if (existing !== undefined) await this.flushFleetRun(existing.handle.agent)
+    const saved = await this.storedFleetRunPrompt(sessionId)
+    if (saved !== undefined) {
+      return fleetRunInputMatches(saved, input)
+        ? fleetRunReceipt(sessionId, saved)
+        : { kind: 'conflict' }
+    }
+
+    const record = existing ?? await this.openSession(sessionId, await persistence.stat(sessionId) !== undefined)
+    this.assertLiveAgent(record, sessionId)
+    this.lifetime.signal.throwIfAborted()
+    const agent = record.handle.agent
+    const prompt = createUserMessage({ content: [{ type: 'text', text: input }], source: { kind: 'user' } })
+    agent.followup(prompt)
+    await this.flushFleetRun(agent)
+    return fleetRunReceipt(sessionId, prompt)
+  }
+
+  private async flushFleetRun(agent: Agent): Promise<void> {
+    if (!await this.ctx.sessions.flush(agent.session)) throw new Error('Fleet run persistence is inactive')
   }
 
   private async getOrCreateSession(sessionId: string): Promise<SessionRecord> {
