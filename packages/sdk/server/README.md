@@ -86,10 +86,13 @@ Stdout carries only JSON-RPC frames, so clients can parse every byte; diagnostic
 
 The managed Fleet transport submits one run with `fleet/run/submit` and
 recovers its receipt with `fleet/run/lookup`. Both methods receive the original
-`{ key, input }`. The operation key selects a stable native Session ID within
-this installation's persistence store. An accepted receipt returns that
-`runId` and the originally inserted `messageId`. A second input for the same
-key returns `{ kind: "conflict" }`. A lookup without a recorded input returns
+`{ key, input, sessionId, deploymentId, revision, requestHash }`.
+The transport supplies the Fleet chat session, deployment identity, immutable
+configuration revision, and SHA-256 of the original wire request. The operation
+key and deployment ID select a stable native Session ID. An accepted receipt
+returns the run ID, original message ID, Fleet chat session ID, and revision.
+A repeat with a different request for that key and deployment returns
+`{ kind: "conflict" }`. A lookup without a recorded input returns
 `{ kind: "not-found" }`.
 
 The server acknowledges acceptance after the Session's native inbox event

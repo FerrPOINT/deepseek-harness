@@ -15,9 +15,8 @@ import { queryCommand } from './query-input.ts'
 import { queryCommandImages, queryContent } from './query-content.ts'
 import {
   fleetRunAddress,
-  fleetRunInputMatches,
+  fleetRunAdmissionReceipt,
   fleetRunParams,
-  fleetRunPrompt,
   fleetRunReceipt,
   fleetRunSessionId,
   fleetRunSnapshot,
@@ -730,19 +729,18 @@ export class HarnessSdkJsonRpcServer {
   }
 
   private async lookupFleetRun(params: FleetRunParams) {
-    const sessionId = fleetRunSessionId(params.key)
-    await this.fleetOperations.get(sessionId)?.catch(() => undefined)
-    const current = this.sessions.get(sessionId)
-    if (current !== undefined) await this.flushFleetRun(current.handle.agent)
-    const prompt = fleetRunPrompt(await this.storedFleetRunEvents(sessionId))
-    if (prompt === undefined) return { kind: 'not-found' }
-    if (!fleetRunInputMatches(prompt, params.input)) return { kind: 'conflict' }
-    return fleetRunReceipt(sessionId, prompt)
+    const sessionId = fleetRunSessionId(params)
+    return this.withFleetRun(sessionId, async () => {
+      const current = this.sessions.get(sessionId)
+      if (current !== undefined) await this.flushFleetRun(current.handle.agent)
+      return fleetRunAdmissionReceipt(sessionId, await this.storedFleetRunEvents(sessionId), params)
+        ?? { kind: 'not-found' }
+    })
   }
 
   private submitFleetRun(params: FleetRunParams) {
-    const sessionId = fleetRunSessionId(params.key)
-    return this.withFleetRun(sessionId, () => this.admitFleetRun(sessionId, params.input))
+    const sessionId = fleetRunSessionId(params)
+    return this.withFleetRun(sessionId, () => this.admitFleetRun(sessionId, params))
   }
 
   private async withFleetRun<T>(sessionId: SessionId, work: () => Promise<T>): Promise<T> {
@@ -756,27 +754,29 @@ export class HarnessSdkJsonRpcServer {
     }
   }
 
-  private async admitFleetRun(sessionId: SessionId, input: string) {
+  private async admitFleetRun(sessionId: SessionId, params: FleetRunParams) {
     const persistence = this.fleetPersistence()
     const existing = this.sessions.get(sessionId)
     // A failed transport response may follow a successful queue write. Drain
     // that exact Session before deciding whether there is any input to submit.
     if (existing !== undefined) await this.flushFleetRun(existing.handle.agent)
-    const saved = fleetRunPrompt(await this.storedFleetRunEvents(sessionId))
-    if (saved !== undefined) {
-      return fleetRunInputMatches(saved, input)
-        ? fleetRunReceipt(sessionId, saved)
-        : { kind: 'conflict' }
-    }
+    const saved = fleetRunAdmissionReceipt(sessionId, await this.storedFleetRunEvents(sessionId), params)
+    if (saved !== undefined) return saved
 
     const record = existing ?? await this.openSession(sessionId, await persistence.stat(sessionId) !== undefined)
     this.assertLiveAgent(record, sessionId)
     this.lifetime.signal.throwIfAborted()
     const agent = record.handle.agent
-    const prompt = createUserMessage({ content: [{ type: 'text', text: input }], source: { kind: 'user' } })
+    const fleetRun = {
+      sessionId: params.sessionId, deploymentId: params.deploymentId,
+      revision: params.revision, requestHash: params.requestHash,
+    }
+    const prompt = createUserMessage({
+      content: [{ type: 'text', text: params.input }], source: { kind: 'user', fleetRun },
+    })
     agent.followup(prompt)
     await this.flushFleetRun(agent)
-    return fleetRunReceipt(sessionId, prompt)
+    return fleetRunReceipt(sessionId, prompt.id, fleetRun)
   }
 
   private async flushFleetRun(agent: Agent): Promise<void> {

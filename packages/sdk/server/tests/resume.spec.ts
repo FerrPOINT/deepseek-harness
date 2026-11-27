@@ -22,6 +22,13 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup()
 })
 
+function fleetCommand(key: string, input = 'original input') {
+  return {
+    key, input, sessionId: 'fleet:fixture-chat', deploymentId: 'fixture-alpha',
+    revision: 'b'.repeat(64), requestHash: 'c'.repeat(64),
+  }
+}
+
 async function storageRoot(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'sdk-resume-'))
   cleanups.push(() => rm(root, { recursive: true, force: true }))
@@ -266,14 +273,17 @@ describe('SDK persisted session resume', () => {
     const root = await storageRoot()
     const first = await initialized(root)
     const key = 'fleet-fixture:one'
-    const command = { key, input: 'original input' }
+    const command = fleetCommand(key)
 
     await expect(first.server.handleRequest('fleet/run/lookup', command)).resolves.toEqual({ kind: 'not-found' })
     const [accepted, concurrent] = await Promise.all([
       first.server.handleRequest('fleet/run/submit', command),
       first.server.handleRequest('fleet/run/submit', command),
     ])
-    expect(accepted).toEqual({ kind: 'accepted', runId: expect.any(String), messageId: expect.any(String) })
+    expect(accepted).toEqual({
+      kind: 'accepted', runId: expect.any(String), messageId: expect.any(String),
+      sessionId: command.sessionId, revision: command.revision,
+    })
     expect(concurrent).toEqual(accepted)
     expect(first.ctx.agents.list()).toHaveLength(1)
     const sessionId = first.ctx.agents.list()[0]!.session.id
@@ -297,8 +307,13 @@ describe('SDK persisted session resume', () => {
     await expect(restarted.server.handleRequest('fleet/run/lookup', { ...command, input: 'changed input' }))
       .resolves.toEqual({ kind: 'conflict' })
     await expect(restarted.server.handleRequest('fleet/run/submit', command)).resolves.toEqual(accepted)
-    await expect(restarted.server.handleRequest('fleet/run/submit', { ...command, input: 'changed input' }))
-      .resolves.toEqual({ kind: 'conflict' })
+    for (const changed of [
+      { input: 'changed input' }, { sessionId: 'fleet:other-chat' },
+      { requestHash: 'd'.repeat(64) }, { revision: 'e'.repeat(64) },
+    ]) {
+      await expect(restarted.server.handleRequest('fleet/run/submit', { ...command, ...changed }))
+        .resolves.toEqual({ kind: 'conflict' })
+    }
     await expect(restarted.server.prompt({ sessionId, contentBlocks: [{ type: 'text', text: 'extra prompt' }] }))
       .rejects.toThrow('Fleet run sessions require the Fleet run API')
     expect(restarted.ctx.agents.list()).toHaveLength(0)
@@ -307,6 +322,11 @@ describe('SDK persisted session resume', () => {
     const otherInstance = await initialized(await storageRoot())
     await expect(otherInstance.server.handleRequest('fleet/run/lookup', command))
       .resolves.toEqual({ kind: 'not-found' })
+    const otherAccepted = await otherInstance.server.handleRequest('fleet/run/submit', {
+      ...command, deploymentId: 'fixture-beta',
+    })
+    expect(otherAccepted).toMatchObject({ kind: 'accepted' })
+    expect(otherAccepted).not.toMatchObject({ runId: sessionId })
     await expect(otherInstance.server.handleRequest('fleet/run/stop', { runId: sessionId }))
       .resolves.toEqual({ kind: 'not-found' })
   })
@@ -318,7 +338,7 @@ describe('SDK persisted session resume', () => {
     first.ctx.llm.registerAdapter(['hanging'], adapter)
     await first.server.initialize({ cwd: root, provider: 'hanging', model: 'hanging' })
     const submit = async (key: string) =>
-      await first.server.handleRequest('fleet/run/submit', { key, input: key }) as { runId: string }
+      await first.server.handleRequest('fleet/run/submit', fleetCommand(key, key)) as { runId: string }
     const alpha = await submit('alpha')
     const beta = await submit('beta')
     await vi.waitFor(() => expect(adapter.requests).toHaveLength(2))
@@ -340,9 +360,7 @@ describe('SDK persisted session resume', () => {
     'restores the native durable Fleet prefix for %s',
     async (scenario) => {
       const first = await initialized(await storageRoot())
-      const { runId } = await first.server.handleRequest('fleet/run/submit', {
-        key: 'restore', input: 'original input',
-      }) as { runId: string }
+      const { runId } = await first.server.handleRequest('fleet/run/submit', fleetCommand('restore')) as { runId: string }
       const sessionId = brandString<SessionId>(runId)
       await first.server.wait({ sessionId })
       const live = first.ctx.agents.get(sessionId)!.session

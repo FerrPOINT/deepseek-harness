@@ -8,32 +8,56 @@ import { extractTextContent } from '@deepseek-ai/dsh-llm/message'
 
 const prefix = 'fleet-run-'
 
-export type FleetRunParams = { readonly key: string; readonly input: string }
+interface FleetRunIdentity {
+  readonly sessionId: string
+  readonly deploymentId: string
+  readonly revision: string
+  readonly requestHash: string
+}
 
-export function fleetRunSessionId(key: string): SessionId {
-  return brandString<SessionId>(prefix + createHash('sha256').update(key).digest('hex'))
+declare module '@deepseek-ai/dsh-llm' {
+  interface MessageSourceMap {
+    'fleet-run': { kind: 'user'; fleetRun: FleetRunIdentity }
+  }
+}
+
+export interface FleetRunParams extends FleetRunIdentity {
+  readonly key: string
+  readonly input: string
+}
+
+export function fleetRunSessionId({ deploymentId, key }: FleetRunParams): SessionId {
+  const hash = createHash('sha256').update(deploymentId).update('\0').update(key).digest('hex')
+  return brandString<SessionId>(prefix + hash)
 }
 
 export function requireOrdinarySession(sessionId: string): void {
   if (sessionId.startsWith(prefix)) throw new Error('Fleet run sessions require the Fleet run API')
 }
 
-function fleetRunKey(params: Record<string, unknown> | undefined): string {
-  const key = params?.key
-  if (typeof key !== 'string' || !/^[a-zA-Z0-9_:.@/-]{1,255}$/.test(key)) {
-    throw new TypeError('Fleet run requires a valid operation key')
-  }
-  return key
+const rpcIdentifier = /^[a-zA-Z0-9_:.@/-]{1,255}$/
+const sha256 = /^[a-f0-9]{64}$/
+const requestFields = new Set(['key', 'input', 'sessionId', 'deploymentId', 'revision', 'requestHash'])
+
+function isIdentifier(value: unknown): value is string {
+  return typeof value === 'string' && rpcIdentifier.test(value)
+}
+
+function isDigest(value: unknown): value is string {
+  return typeof value === 'string' && sha256.test(value)
 }
 
 export function fleetRunParams(params: Record<string, unknown> | undefined): FleetRunParams {
-  const key = fleetRunKey(params)
-  const input = params?.input
-  if (typeof input !== 'string' || !input.trim() || Buffer.byteLength(input) > 1024 * 1024
-    || params === undefined || Object.keys(params).some(field => field !== 'key' && field !== 'input')) {
-    throw new TypeError('Fleet run requires only the operation key and its nonempty input')
+  if (params === undefined || Object.keys(params).some(field => !requestFields.has(field))) {
+    throw new TypeError('Invalid Fleet request fields')
   }
-  return { key, input }
+  const { key, input, sessionId, deploymentId, revision, requestHash } = params
+  if (!isIdentifier(key) || !isIdentifier(sessionId) || !isIdentifier(deploymentId)
+    || !isDigest(revision) || !isDigest(requestHash)
+    || typeof input !== 'string' || !input.trim() || Buffer.byteLength(input) > 1024 * 1024) {
+    throw new TypeError('Invalid Fleet request identity or input')
+  }
+  return { key, input, sessionId, deploymentId, revision, requestHash }
 }
 
 export function fleetRunAddress(params: Record<string, unknown> | undefined, allowCursor = false) {
@@ -53,14 +77,24 @@ export function fleetRunAddress(params: Record<string, unknown> | undefined, all
 function fleetRunAdmission(events: readonly SessionEvent[]) {
   for (const event of events) {
     if (event.type !== 'agent/inbox/spliced' || event.data.target !== 'next-turn') continue
-    const prompt = event.data.inserted.find(message => message.source.kind === 'user')
-    if (prompt !== undefined) return { prompt, seq: event.seq }
+    for (const prompt of event.data.inserted) {
+      if ('fleetRun' in prompt.source) return { prompt, identity: prompt.source.fleetRun, seq: event.seq }
+    }
   }
   return undefined
 }
 
-export function fleetRunPrompt(events: readonly SessionEvent[]): UserMessage | undefined {
-  return fleetRunAdmission(events)?.prompt
+export function fleetRunAdmissionReceipt(runId: SessionId, events: readonly SessionEvent[], params: FleetRunParams) {
+  const admission = fleetRunAdmission(events)
+  if (admission === undefined) return undefined
+  const { identity, prompt } = admission
+  const block = prompt.content[0]
+  if (identity.sessionId !== params.sessionId || identity.deploymentId !== params.deploymentId
+    || identity.revision !== params.revision || identity.requestHash !== params.requestHash
+    || prompt.content.length !== 1 || block?.type !== 'text' || block.text !== params.input) {
+    return { kind: 'conflict' as const }
+  }
+  return fleetRunReceipt(runId, prompt.id, identity)
 }
 
 type TerminalStatus = 'completed' | 'cancelled' | 'failed' | 'interrupted'
@@ -88,7 +122,7 @@ export function fleetRunTerminal(status: FleetRunStatus): boolean {
 export function fleetRunSnapshot(sessionId: SessionId, log: readonly SessionEvent[], after: number) {
   const admission = fleetRunAdmission(log)
   if (admission === undefined) return { kind: 'not-found' as const }
-  const { prompt, seq } = admission
+  const { prompt, identity, seq } = admission
   const events: FleetRunEvent[] = [{ seq, type: 'accepted', messageId: prompt.id }]
   let status: FleetRunStatus = 'queued'
   let openTurn: number | undefined
@@ -129,6 +163,8 @@ export function fleetRunSnapshot(sessionId: SessionId, log: readonly SessionEven
     kind: 'run' as const,
     runId: sessionId,
     messageId: prompt.id,
+    sessionId: identity.sessionId,
+    revision: identity.revision,
     status,
     output,
     cursor: events.at(-1)?.seq ?? seq,
@@ -136,11 +172,6 @@ export function fleetRunSnapshot(sessionId: SessionId, log: readonly SessionEven
   }
 }
 
-export function fleetRunReceipt(sessionId: SessionId, prompt: UserMessage) {
-  return { kind: 'accepted' as const, runId: sessionId, messageId: prompt.id }
-}
-
-export function fleetRunInputMatches(prompt: UserMessage, input: string): boolean {
-  const block = prompt.content[0]
-  return prompt.content.length === 1 && block?.type === 'text' && block.text === input
+export function fleetRunReceipt(runId: SessionId, messageId: UserMessage['id'], identity: FleetRunIdentity) {
+  return { kind: 'accepted' as const, runId, messageId, sessionId: identity.sessionId, revision: identity.revision }
 }
